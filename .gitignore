@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+.venv/
+venv/
+chroma.log
+*.log
+.freebuff/
+.DS_Store
