@@ -10,7 +10,7 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r backend/requirements-dev.txt
@@ -24,7 +24,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r backend/requirements-dev.txt
@@ -38,7 +38,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r backend/requirements-dev.txt
@@ -49,7 +49,7 @@ jobs:
     needs: [unit-tests, security-tests]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build, start and smoke test the stack (health checks, all modules, hardening)
         run: scripts/docker_smoke.sh
 
@@ -57,7 +57,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - name: Audit pinned Python dependencies
@@ -76,7 +76,7 @@ jobs:
     needs: [unit-tests, security-tests]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -t lab-backend:ci backend && docker build -t lab-frontend:ci frontend
       - name: Scan images (fail on fixable HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@0.28.0
