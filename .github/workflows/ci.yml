@@ -15,7 +15,7 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r backend/requirements-dev.txt
       - run: ruff check backend tests
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "20", cache: npm, cache-dependency-path: frontend/package-lock.json }
       - run: npm ci && npm run lint
         working-directory: frontend
@@ -29,7 +29,7 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r backend/requirements-dev.txt
       - run: pytest -m "not security" -q
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "20", cache: npm, cache-dependency-path: frontend/package-lock.json }
       - run: npm ci && npm test
         working-directory: frontend
@@ -67,7 +67,7 @@ jobs:
           pip install pip-audit==2.7.3
           pip-audit -r backend/constraints.txt --no-deps \
             --ignore-vuln PYSEC-2026-3813 --ignore-vuln PYSEC-2026-3814 --ignore-vuln PYSEC-2026-3815
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "20" }
       - run: npm ci && npm audit --omit=dev --audit-level=high
         working-directory: frontend
