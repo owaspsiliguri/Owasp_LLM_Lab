@@ -1,0 +1,32 @@
+# Render blueprint for the lab API (FastAPI backend).
+#
+# How to use (beginner friendly steps are in docs/Deployment_Guide.md):
+#   Render dashboard -> New -> Blueprint -> pick this repository -> Apply.
+#   Then fill in the four `sync: false` environment variables in the service
+#   settings after Supabase and Vercel are set up.
+services:
+  - type: web
+    name: owasp-llm-lab-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      # Frontend origin allowed to call this API (your Vercel URL, no trailing slash).
+      - key: CORS_ORIGINS
+        value: https://YOUR-APP.vercel.app
+      # Keeps flags stable across redeploys (Render "Generate value" is fine too).
+      - key: LAB_SECRET
+        generateValue: true
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "120"
+      # Supabase integration - copy from Supabase -> Settings -> API.
+      # Leave unset to run the lab open, without login (local mode).
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
