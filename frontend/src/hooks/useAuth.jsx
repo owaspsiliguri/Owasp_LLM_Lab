@@ -75,9 +75,22 @@ export function AuthProvider({ children }) {
     if (data) setState((s) => (s.session ? { ...s, profile: data } : s))
   }, [])
 
+  const updateName = useCallback(async (fullName) => {
+    if (!isAuthEnabled()) throw new Error('Cloud profiles are not configured on this deployment.')
+    const { error } = await supabase().rpc('save_profile', { p_full_name: fullName })
+    if (error) throw new Error(error.message)
+    await refreshProfile()
+  }, [refreshProfile])
+
+  const updatePassword = useCallback(async (password) => {
+    if (!isAuthEnabled()) throw new Error('Cloud profiles are not configured on this deployment.')
+    const { error } = await supabase().auth.updateUser({ password })
+    if (error) throw new Error(error.message)
+  }, [])
+
   const value = useMemo(
-    () => ({ ...state, signIn, signUp, signOut, refreshProfile }),
-    [state, signIn, signUp, signOut, refreshProfile],
+    () => ({ ...state, signIn, signUp, signOut, refreshProfile, updateName, updatePassword }),
+    [state, signIn, signUp, signOut, refreshProfile, updateName, updatePassword],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

@@ -39,12 +39,18 @@ export default function Dashboard() {
         </div>
         <div className="panel p-4" aria-label="Service status">
           <h2 className="font-medium">Service status</h2>
-          {health ? (
+          {!health && <p className="mt-2 text-sm text-warn-400">Backend not reachable.</p>}
+          {health && (
             <ul className="mt-2 space-y-1 text-sm text-fog-300">
               <li>Backend: <span className="text-safe-400">online</span> ({health.modules} modules)</li>
-              <li>Ollama: {health.ollama.reachable ? (health.ollama.model_ready ? <span className="text-safe-400">ready ({health.ollama.model})</span> : <span className="text-warn-400">reachable, model {health.ollama.model} still downloading</span>) : <span className="text-warn-400">not reachable (deterministic engine still works)</span>}</li>
+              {health.engines?.groq !== undefined && <li>Groq engine: {health.engines.groq ? <span className="text-safe-400">active</span> : <span className="text-fog-500">add GROQ_API_KEY on the server</span>}</li>}
+              {health.engines?.gemini !== undefined && <li>Gemini engine: {health.engines.gemini ? <span className="text-safe-400">active</span> : <span className="text-fog-500">add GEMINI_API_KEY on the server</span>}</li>}
+              {health.engines && <li>LLM judge: {health.engines.judge !== 'off' ? <span className="text-safe-400">{health.engines.judge}</span> : <span className="text-fog-500">off (add a Groq or Gemini key)</span>}</li>}
+              {health.engines && !health.engines.groq && !health.engines.gemini && (
+                <li className="text-fog-500">Labs currently run on the built-in simulator until a key is added.</li>
+              )}
             </ul>
-          ) : <p className="mt-2 text-sm text-warn-400">Backend not reachable.</p>}
+          )}
         </div>
       </div>
     </div>

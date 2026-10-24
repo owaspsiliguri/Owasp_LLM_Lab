@@ -45,6 +45,11 @@ function Result({ title, tone, data, error }) {
       {!data && !error && <p className="text-sm text-fog-500">Not run yet.</p>}
       {data && (
         <div className="space-y-2">
+          {data.judge && (
+            <p aria-label="LLM judge verdict" className={`rounded border px-2 py-1 text-xs ${data.judge.verdict === 'leaked' ? 'border-vuln-400/50 text-vuln-400' : 'border-safe-400/50 text-safe-400'}`}>
+              LLM judge ({data.judge.provider}): <strong className="capitalize">{data.judge.verdict}</strong> — {data.judge.reason}
+            </p>
+          )}
           {data.output !== undefined && data.variant !== 'html' && <CodeBlock label="Response" code={text(data.output)} />}
           {data.variant === 'html' && (
             <>
@@ -82,15 +87,15 @@ export default function RunPanel({ module }) {
   const { mode, mark } = useProgress()
   const [input, setInput] = useState('')
   const [variant, setVariant] = useState(module.variants[0] || null)
-  const [engine, setEngine] = useState('deterministic')
   const [res, setRes] = useState({ vulnerable: null, secure: null })
   const [err, setErr] = useState({ vulnerable: null, secure: null })
   const [busy, setBusy] = useState(false)
-  const supportsOllama = ['llm01', 'llm02'].includes(module.id)
 
   async function go(which) {
     setBusy(true)
-    const payload = { input, engine, ...(variant ? { variant } : {}) }
+    // No engine is ever chosen in the browser: the server uses Groq or Gemini
+    // when a key is configured, otherwise its built-in simulator.
+    const payload = { input, mode, ...(variant ? { variant } : {}) }
     try {
       const data = await api.run(module.id, which, payload)
       setRes((r) => ({ ...r, [which]: data })); setErr((e) => ({ ...e, [which]: null }))
@@ -115,14 +120,6 @@ export default function RunPanel({ module }) {
           <label className="flex items-center gap-2">{module.variant_label}
             <select aria-label="Variant" className="rounded border border-ink-600 bg-ink-950 px-2 py-1" value={variant} onChange={(e) => setVariant(e.target.value)}>
               {module.variants.map((v) => <option key={v} value={v}>{v.toUpperCase()}</option>)}
-            </select>
-          </label>
-        )}
-        {supportsOllama && (
-          <label className="flex items-center gap-2">Engine
-            <select aria-label="Engine" className="rounded border border-ink-600 bg-ink-950 px-2 py-1" value={engine} onChange={(e) => setEngine(e.target.value)}>
-              <option value="deterministic">Deterministic simulator</option>
-              <option value="ollama">Local model (Ollama)</option>
             </select>
           </label>
         )}

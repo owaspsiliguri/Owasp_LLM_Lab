@@ -67,6 +67,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Stall the virtual worker for more than 30 seconds, then submit the FLAG{...} it reveals.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. Ready-made request storms are rejected. Stall the virtual worker for more than 30 seconds - or collapse its queue - with numbers you choose yourself, capture the proof, then pass Fix-It: complexity must be scored before any model time is spent, and the regression tests are watching.
+
 ## Fix it (Advanced mode)
 
 **Score request complexity before running the model** - check_request(prompt, max_cost=2000) must return True only for prompts whose estimated cost in virtual tokens is at most max_cost. Estimate cost as len(prompt)//4 + 1 input tokens plus output tokens. Output defaults to 200 tokens. A count followed by 'word(s)' (2 tokens each), 'sentence(s)' (25), 'line(s)' (14), 'item(s)' (20), 'paragraph(s)' (120), 'page(s)' (600) sets output to count x unit, summed; if the prompt contains 'for each' or 'each of' the counts multiply instead and use the largest unit. A count followed by 'times' multiplies the whole output. Counts may contain commas and k/m suffixes (1,000 / 10k / 5M). Non-string or empty prompts are rejected.

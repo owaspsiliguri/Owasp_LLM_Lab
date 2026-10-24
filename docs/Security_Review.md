@@ -23,7 +23,7 @@ Scope: the platform itself (not the intentional lab weaknesses). Performed on th
 - Docker image builds, container health and the full stack were **not executed in the environment where this archive was produced** (no Docker daemon). Compose is validated structurally by tests only; CI builds and smoke-tests it.
 - Container image scanning is wired into CI with Trivy (fail on fixable HIGH/CRITICAL) but could **not be run here**: its results on the final images are unknown until CI runs. `scripts/docker_smoke.sh` is likewise written but not executed here.
 - No external penetration test. The manual testing above was limited to the sandbox and API.
-- Behaviour against a real Ollama model was not exercised; the Ollama code path is covered by unit tests of failure handling only.
+- Behaviour against a real Groq/Gemini model was not exercised in CI; the real-engine code path is covered by unit tests of failure handling only.
 
 ## Residual risks
 Python-level sandboxing is defence in depth only; run the lab on localhost or an isolated VM. See Security_Model.md.

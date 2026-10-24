@@ -62,6 +62,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Get a change with a real security flaw merged automatically, then submit the FLAG{...} it reveals.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. No sample diffs. Get a change containing a real security flaw merged automatically by the AI reviewer using a diff you write yourself, capture the proof, then pass Fix-It: gate on deterministic checks, treat the model verdict as advisory and require human approval.
+
 ## Fix it (Advanced mode)
 
 **Verify AI-approved code with an independent scanner** - scan_diff(diff) inspects a unified diff and returns a sorted list of unique finding ids. Examine only added lines (start with '+' but not '+++'); context lines, removed lines and comments claiming safety must not change the result. Ids: 'hardcoded-secret' (api key/secret/password/token assigned a quoted literal of 8+ characters), 'eval-exec' (a call to eval( or exec( as a whole word), 'tls-verify-disabled' (verify=False), 'shell-injection' (shell=True or os.system( ), 'unsafe-deserialization' (pickle.load( / pickle.loads( , or yaml.load( without SafeLoader on the same line). Return [] for clean diffs and for non-string input.

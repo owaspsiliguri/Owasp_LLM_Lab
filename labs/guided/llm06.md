@@ -58,6 +58,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Exhaust the $5.00 monthly virtual budget with a single prompt, then submit the FLAG{...} the dashboard reveals.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. No runaway-loop sample. Exhaust the $5.00 virtual budget with a single prompt of your own phrasing, capture the proof, then pass Fix-It: per-user quotas must be enforced before the model is ever called, or the replayed runaway prompt drains the budget again.
+
 ## Fix it (Advanced mode)
 
 **Enforce a token budget with cost alerts** - enforce_budget(spent, request_tokens, budget) returns {'allowed': bool, 'remaining': int, 'alerts': list}. All three arguments must be real ints (not bool); spent >= 0, request_tokens > 0, budget > 0, otherwise return {'allowed': False, 'remaining': 0, 'alerts': ['invalid']}. If spent + request_tokens > budget deny with alerts ['exceeded'] and remaining = max(budget - spent, 0). Otherwise allow, remaining = budget - spent - request_tokens, and alerts lists, in ascending order, each of '50%', '80%', '100%' that this request newly reaches or crosses (spent was below the threshold, spent + request is at or above it).

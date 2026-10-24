@@ -117,6 +117,11 @@ class SupplyChain(VulnerabilityModule):
     ]
     expected_outcome = "The vulnerable installer runs a simulated post-install hook; the secure installer refuses with a precise reason."
     challenge = "Get the installer to run a malicious post-install hook, then submit the FLAG{...} it reveals."
+    advanced_challenge = (
+        "The catalog samples are off. Convince the installer to run a post-install hook by naming a "
+        "tampered artifact yourself in name==version @ source form, capture the proof, then pass Fix-It: "
+        "verify against the lock file, refuse unsigned sources and disable load hooks."
+    )
     hints = [
         "The vulnerable resolver matches packages by name and accepts any source.",
         "Look for a package whose name differs from a real one by a single character.",

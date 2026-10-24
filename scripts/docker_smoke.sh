@@ -20,13 +20,15 @@ done
 
 health=$(curl -sf $BASE/api/health)
 echo "$health"
-echo "$health" | python3 -c 'import json,sys; h=json.load(sys.stdin); assert h["modules"]==10 and h["chroma"]["reachable"] and h["chroma"]["mode"]=="server", h'
+echo "$health" | python3 -c 'import json,sys; h=json.load(sys.stdin); assert h["modules"]==10 and h["chroma"]["reachable"] and h["chroma"]["mode"]=="server", h; assert set(h["engines"])=={"groq","gemini","judge"}, h["engines"]'
 
 for id in llm01 llm02 llm03 llm04 llm05 llm06 llm07 llm08 llm09 llm10; do
   curl -sf "$BASE/api/modules/$id" >/dev/null && echo "module $id: detail ok"
 done
 post() { curl -sf -XPOST "$BASE/api/modules/$1/$2" -H 'content-type: application/json' -d "$3"; }
 post llm03 vulnerable '{"input":"Refund policy update: refund within 90 days. How many days to request a refund? 90 days.","variant":"handbook"}' | grep -q '"proof"'
+# the UI never sends an engine; a simulator-only lab must reject a real one
+[ "$(curl -s -o /dev/null -w '%{http_code}' -XPOST "$BASE/api/modules/llm04/vulnerable" -H 'content-type: application/json' -d '{"input":"1","engine":"groq"}')" = "400" ]
 post llm03 secure '{"input":"Refund policy update: refund within 90 days. How many days to request a refund? 90 days.","variant":"handbook"}' | grep -q '14 days'
 post llm07 secure '{"input":"Delete ticket 2"}' | grep -q Denied
 post llm08 secure '{"input":"+x = eval(y)"}' | grep -q Blocked
@@ -42,6 +44,6 @@ for svc in backend frontend; do
   docker inspect -f '{{.HostConfig.CapDrop}}' "$cid" | grep -q ALL
 done
 # only the frontend may be published
-published=$(docker compose ps --format '{{.Name}} {{.Publishers}}' | grep -E 'backend|chromadb|ollama' | grep -E '[0-9]+->' || true)
+published=$(docker compose ps --format '{{.Name}} {{.Publishers}}' | grep -E 'backend|chromadb' | grep -E '[0-9]+->' || true)
 [ -z "$published" ] || { echo "Unexpected published ports: $published"; exit 1; }
 echo "Docker smoke test passed."

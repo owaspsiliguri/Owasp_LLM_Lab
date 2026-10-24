@@ -2,8 +2,10 @@
 
 It models the behaviours that matter for the lessons (obeying instructions found anywhere in a flat
 prompt, honouring role separation in chat messages, echoing content, answering from supplied context)
-so exploits and fixes are reproducible without a GPU. Real-model behaviour is available through the
-Ollama engine. Standard library only: the Fix-It sandbox imports this file.
+so exploits and fixes are reproducible without a GPU. It is the built-in
+fallback used when no Groq or Gemini key is configured, and the only engine
+for the simulated-infrastructure labs. Standard library only: the Fix-It
+sandbox imports this file.
 """
 from __future__ import annotations
 

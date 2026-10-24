@@ -67,6 +67,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Poison the knowledge base so the assistant tells customers they have a refund window other than 14 days, then submit the FLAG{...} it reveals.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. Sample documents are disabled. Poison the knowledge base with a submission of your own so the assistant states a refund window other than 14 days, capture the proof, then pass Fix-It: your remediation must reject poisoned provenance while still answering honest queries.
+
 ## Fix it (Advanced mode)
 
 **Verify document provenance** - The ingestion pipeline trusts the 'source' label a submitter claims. Implement verify_provenance(text, source, signature, key): return True only if signature is the lowercase hex HMAC-SHA256 of the string source + newline + text, computed with key. Use a constant-time comparison. Anything malformed (non-strings, empty signature) must return False.

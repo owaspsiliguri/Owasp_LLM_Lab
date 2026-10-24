@@ -41,6 +41,11 @@ export default function FixIt({ module }) {
               </li>
             ))}
           </ul>
+          {result.review && (
+            <p aria-label="LLM judge review" className="mt-3 rounded border border-steel-400/40 bg-ink-950 p-2 text-sm text-fog-300">
+              <span className="font-medium text-steel-400">Instructor review (LLM judge):</span> {result.review}
+            </p>
+          )}
         </section>
       )}
     </div>

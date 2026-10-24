@@ -116,6 +116,11 @@ class ModelDoS(VulnerabilityModule):
     ]
     expected_outcome = "The vulnerable worker stalls for everyone; the secure service rejects the abusive prompt and sheds burst traffic."
     challenge = "Stall the virtual worker for more than 30 seconds, then submit the FLAG{...} it reveals."
+    advanced_challenge = (
+        "Ready-made request storms are rejected. Stall the virtual worker for more than 30 seconds - or "
+        "collapse its queue - with numbers you choose yourself, capture the proof, then pass Fix-It: "
+        "complexity must be scored before any model time is spent, and the regression tests are watching."
+    )
     hints = [
         "Cost is output tokens multiplied by repetition. Large counts matter more than long prompts.",
         "Repetition phrases such as 'N times' multiply the output; 'for each ... N ...' multiplies nested counts.",

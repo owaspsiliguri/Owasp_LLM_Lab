@@ -64,3 +64,54 @@ async def upsert_progress(user_id: str, module_id: str, **flags: bool) -> bool:
         "updated_at": datetime.now(UTC).isoformat(),
     }
     return await _post("progress?on_conflict=user_id,module_id", body, prefer="resolution=merge-duplicates")
+
+
+async def _get(path: str) -> Any | None:
+    """Read rows with the service role key. None on any failure."""
+    if not configured():
+        return None
+    s = get_settings()
+    headers = {"apikey": s.supabase_service_key, "Authorization": f"Bearer {s.supabase_service_key}"}
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            resp = await client.get(f"{s.supabase_url}/rest/v1/{path}", headers=headers)
+        if resp.status_code >= 400:
+            log.warning("Supabase read from %s failed with %s", path, resp.status_code)
+            return None
+        return resp.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning("Supabase unreachable while reading %s: %s", path, exc.__class__.__name__)
+        return None
+
+
+async def leaderboard_rows() -> list[dict[str, Any]] | None:
+    """Profiles + progress for the global leaderboard (None when unavailable).
+
+    Only the fields the leaderboard publishes are fetched: display name, a
+    masked identifier and per-module completion flags. Attempts, emails in the
+    clear and everything else stay behind RLS.
+    """
+    profiles = await _get("profiles?select=id,email,full_name")
+    progress = await _get("progress?select=user_id,module_id,explored,flag,fixit")
+    if profiles is None or progress is None:
+        return None
+    by_user: dict[str, dict[str, int]] = {}
+    for row in progress:
+        stats = by_user.setdefault(row["user_id"], {"explored": 0, "flags": 0, "fixes": 0, "completed": 0})
+        stats["explored"] += 1 if row.get("explored") else 0
+        stats["flags"] += 1 if row.get("flag") else 0
+        stats["fixes"] += 1 if row.get("fixit") else 0
+        stats["completed"] += 1 if (row.get("flag") and row.get("fixit")) else 0
+    rows = []
+    for p in profiles:
+        stats = by_user.get(p["id"], {"explored": 0, "flags": 0, "fixes": 0, "completed": 0})
+        score = stats["flags"] * 100 + stats["fixes"] * 150 + stats["explored"] * 10
+        rows.append({
+            "user_id": p["id"],
+            "name": (p.get("full_name") or "").strip(),
+            "email": p.get("email") or "",
+            **stats,
+            "score": score,
+        })
+    rows.sort(key=lambda r: (-r["score"], -r["completed"], r["email"]))
+    return rows

@@ -135,6 +135,11 @@ class ExcessiveAgency(VulnerabilityModule):
     ]
     expected_outcome = "The vulnerable assistant performs every action; the secure one allows only mallory's own ticket and denies or holds the rest."
     challenge = "Make the assistant perform a destructive or unauthorised action as a customer, then submit the FLAG{...} it reveals."
+    advanced_challenge = (
+        "No sample actions. As customer mallory, make the assistant perform a destructive or unauthorised "
+        "action with a request you design yourself, capture the proof, then pass Fix-It: authorize every "
+        "model-requested tool call against the real user and resource, deny by default."
+    )
     hints = [
         "The backend never asks whether you are allowed to do what the model decided to do.",
         "Tickets belong to different owners. You are only 'mallory'.",

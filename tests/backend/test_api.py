@@ -41,17 +41,9 @@ def test_flags_are_module_specific(client):
     assert client.post("/api/modules/llm01/flag", json={"flag": flag_for("llm02")}).json()["correct"] is False
 
 
-@pytest.mark.parametrize("body", [{}, {"input": ""}, {"input": "x" * 2001}, {"input": "a", "extra": 1}, {"input": "a", "engine": "gpt"}])
+@pytest.mark.parametrize("body", [{}, {"input": ""}, {"input": "x" * 2001}, {"input": "a", "extra": 1}, {"input": "a", "engine": "gpt"}, {"input": "a", "engine": "ollama"}])
 def test_input_validation(client, body):
     assert client.post("/api/modules/llm01/vulnerable", json=body).status_code == 422
-
-
-def test_ollama_engine_reports_503_when_unreachable(client, monkeypatch):
-    monkeypatch.setenv("OLLAMA_URL", "http://127.0.0.1:9")
-    from app.config import get_settings
-    assert get_settings().ollama_url == "http://127.0.0.1:9"
-    r = client.post("/api/modules/llm01/vulnerable", json={"input": "hi", "engine": "ollama"})
-    assert r.status_code == 503
 
 
 def test_health_reports_chroma(client):
@@ -66,6 +58,6 @@ def test_unknown_variant_rejected(client):
 
 
 @pytest.mark.parametrize("mid", ["llm03", "llm04", "llm05", "llm06", "llm07", "llm08", "llm09"])
-def test_rag_and_simulated_modules_reject_ollama_engine(client, mid):
-    r = client.post(f"/api/modules/{mid}/vulnerable", json={"input": "1", "engine": "ollama"})
+def test_simulated_modules_reject_real_engines(client, mid):
+    r = client.post(f"/api/modules/{mid}/vulnerable", json={"input": "1", "engine": "groq"})
     assert r.status_code == 400

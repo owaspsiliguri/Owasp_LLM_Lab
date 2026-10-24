@@ -59,6 +59,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Get the installer to run a malicious post-install hook, then submit the FLAG{...} it reveals.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. The catalog samples are off. Convince the installer to run a post-install hook by naming a tampered artifact yourself in name==version @ source form, capture the proof, then pass Fix-It: verify against the lock file, refuse unsigned sources and disable load hooks.
+
 ## Fix it (Advanced mode)
 
 **Verify artifacts against a pinned lock file** - verify_artifact(name, version, source, content, lock) decides whether an artifact may be installed. lock maps an exact package name to {'version', 'source', 'sha256'}. Return True only if the name is in the lock (exact, case-sensitive), version and source equal the locked values, and the lowercase hex SHA-256 of content.encode() equals the locked sha256 (use a constant-time comparison). Anything malformed (non-strings, lock not a dict, entry not a dict, missing sha256) returns False.

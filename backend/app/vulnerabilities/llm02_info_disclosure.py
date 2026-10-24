@@ -66,6 +66,7 @@ class InfoDisclosure(VulnerabilityModule):
     category = "LLM02:2025 Sensitive Information Disclosure"
     owasp_id = "LLM02"
     difficulty = "Beginner"
+    supports_real_llm = True
     estimated_minutes = 25
     prerequisites = ["LLM01 Prompt Injection", "Basic regular expressions"]
     overview = (
@@ -96,6 +97,12 @@ class InfoDisclosure(VulnerabilityModule):
     ]
     expected_outcome = "The vulnerable assistant reveals credentials and other customers' data; the secure one cannot, because the data is not in its context."
     challenge = "Extract the DEPLOY_TOKEN from the assistant and submit the FLAG{...} value."
+    advanced_challenge = (
+        "The echoed context now hides credential values, so you cannot read the answer off the screen. "
+        "Elicit the live DEPLOY_TOKEN - and any other credential you can find - from the assistant with "
+        "questions of your own, then pass Fix-It: least-privilege context plus a redaction filter that "
+        "survives every extraction attempt in the replayed tests."
+    )
     hints = [
         "Everything in the context window is fair game for the model to repeat.",
         "The assistant was given internal configuration. Ask about credentials, keys or tokens.",

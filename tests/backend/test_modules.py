@@ -84,6 +84,6 @@ def test_llm10_json(client):
     assert not ok["rejected"] and ok["state"]["orders"]["1"]["refunded"] == 20
 
 
-def test_llm10_requires_variant_and_deterministic(client):
+def test_llm10_requires_variant_and_simulator(client):
     assert client.post("/api/modules/llm10/vulnerable", json={"input": "x"}).status_code == 400
-    assert client.post("/api/modules/llm10/vulnerable", json={"input": "x", "variant": "sql", "engine": "ollama"}).status_code == 400
+    assert client.post("/api/modules/llm10/vulnerable", json={"input": "x", "variant": "sql", "engine": "groq"}).status_code == 400

@@ -13,7 +13,7 @@ Learner browser → nginx → FastAPI. The deployment has two modes:
 - The browser only ever sees the publishable/anon key; the service role key exists solely in Render environment variables. `CORS_ORIGINS` restricts which UI may call the API.
 
 ## Controls
-Strict pydantic validation (extra fields forbidden, length limits); security headers on API and nginx; per-IP rate limiting; CORS allow-list; non-root, read-only, capability-dropped containers with memory and PID limits; no host ports for backend, Ollama or ChromaDB; pinned dependencies; HMAC-derived flags stored in a mode-0600 secret file or `LAB_SECRET`; no outbound requests except to the configured Ollama and ChromaDB URLs; ChromaDB telemetry disabled; every RAG request uses a throwaway collection.
+Strict pydantic validation (extra fields forbidden, length limits); security headers on API and nginx; per-IP rate limiting; CORS allow-list; non-root, read-only, capability-dropped containers with memory and PID limits; no host ports for backend or ChromaDB; pinned dependencies; HMAC-derived flags stored in a mode-0600 secret file or `LAB_SECRET`; no outbound requests except to the configured ChromaDB URL and, when a key is set, the Groq and Gemini APIs; ChromaDB telemetry disabled; every RAG request uses a throwaway collection.
 
 ## Fix-It sandbox
 Learner code is (1) AST-checked: import allow-list (`re`, `html`, `json`, `unicodedata`, `urllib.parse`, `sqlite3`, `hmac`, `hashlib`, `math`), banned builtins (`eval`, `exec`, `open`, `getattr`, ...), no dunder or traversal attributes, no string literals containing `__`, 8000-character cap; (2) run in a separate Python process with `-E -s`, empty environment, `RLIMIT_CPU` 5 s, `RLIMIT_AS` 512 MB, `RLIMIT_FSIZE` 1 MB, new session, wall-clock timeout; (3) inside the read-only, non-root, capability-less backend container.
@@ -25,6 +25,6 @@ The Chroma service has no authentication and no published port; it is reachable 
 - Python-level sandboxing is defence in depth, not a proof of isolation. Treat the backend container as the boundary and do not run the lab on a shared or internet-facing host.
 - The rate limiter is in-process and per replica.
 - Per-process memory limits do not bound a regex denial of service beyond the CPU and wall-clock limits (which do terminate it).
-- Deterministic mode simulates model behaviour; real models are less predictable, and role separation alone does not make a real model immune to injection.
+- The simulator models model behaviour; real models are less predictable, and role separation alone does not make a real model immune to injection.
 - In deployed mode, `progress` rows belong to the learner under RLS, so a determined student can edit their *own* progress without doing the lab. The `attempts` audit trail cannot be forged (backend-written only); judge completion from the admin console's attempts feed where it matters.
 - On Render/Vercel the sandbox runs without the local compose hardening (read-only rootfs, dropped capabilities, memory/PID limits); the AST policy, rlimits and wall-clock timeout still apply.

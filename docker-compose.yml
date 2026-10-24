@@ -25,14 +25,18 @@ services:
 
   backend:
     build: ./backend
+    env_file:
+      - .env
+      - .env.local
     environment:
-      OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:1b}
       CHROMA_URL: http://chromadb:8000
       ANONYMIZED_TELEMETRY: "False"
       CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-120}
       LAB_DATA_DIR: /data
+    # Groq/Gemini keys and model/judge settings come from env_file (.env and
+    # .env.local) above, not from here: an `${VAR:-}` line in `environment:`
+    # would be resolved from the project .env and blank out the keys.
     volumes:
       - lab_data:/data
     depends_on:
@@ -49,29 +53,6 @@ services:
       interval: 10s
       timeout: 4s
       retries: 6
-    networks: [lab]
-
-  ollama:
-    image: ollama/ollama:0.5.7
-    volumes:
-      - ollama_models:/root/.ollama
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks: [lab]
-
-  ollama-init:
-    image: ollama/ollama:0.5.7
-    depends_on:
-      ollama:
-        condition: service_healthy
-    environment:
-      OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:1b}
-    entrypoint: ["/bin/sh", "-c", "ollama pull \"$$OLLAMA_MODEL\""]
-    restart: "no"
     networks: [lab]
 
   # Vector database used by the RAG modules (LLM03, LLM09). Not published to the host.
@@ -91,7 +72,6 @@ services:
 
 volumes:
   lab_data:
-  ollama_models:
   chroma_data:
 
 networks:

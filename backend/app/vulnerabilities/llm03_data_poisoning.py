@@ -149,6 +149,11 @@ class DataPoisoning(VulnerabilityModule):
     ]
     expected_outcome = "The vulnerable assistant states a poisoned refund window; the secure pipeline quarantines the document and cites the signed policy."
     challenge = "Poison the knowledge base so the assistant tells customers they have a refund window other than 14 days, then submit the FLAG{...} it reveals."
+    advanced_challenge = (
+        "Sample documents are disabled. Poison the knowledge base with a submission of your own so the "
+        "assistant states a refund window other than 14 days, capture the proof, then pass Fix-It: your "
+        "remediation must reject poisoned provenance while still answering honest queries."
+    )
     hints = [
         "The pipeline gives a ranking boost to documents that claim a trusted source.",
         "Retrieval is similarity based: a document that repeats the question's words scores higher.",

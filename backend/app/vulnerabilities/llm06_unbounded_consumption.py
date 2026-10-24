@@ -114,6 +114,11 @@ class UnboundedConsumption(VulnerabilityModule):
     ]
     expected_outcome = "The vulnerable session spends far beyond the budget; the secure session stops at the cap or quota and raises alerts."
     challenge = "Exhaust the $5.00 monthly virtual budget with a single prompt, then submit the FLAG{...} the dashboard reveals."
+    advanced_challenge = (
+        "No runaway-loop sample. Exhaust the $5.00 virtual budget with a single prompt of your own "
+        "phrasing, capture the proof, then pass Fix-It: per-user quotas must be enforced before the "
+        "model is ever called, or the replayed runaway prompt drains the budget again."
+    )
     hints = [
         "The assistant continues while the user's request asks it to.",
         "Phrases like 'keep going' or 'continue until' make the simulated model ask for more turns.",

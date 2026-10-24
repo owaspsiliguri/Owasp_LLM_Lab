@@ -11,6 +11,8 @@ import Contribute from './pages/Contribute.jsx'
 import Admin from './pages/Admin.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
+import Profile from './pages/Profile.jsx'
+import Leaderboard from './pages/Leaderboard.jsx'
 import { useAuth } from './hooks/useAuth.jsx'
 import { isAuthEnabled } from './services/supabase.js'
 
@@ -49,6 +51,8 @@ export default function App() {
         <Route path="labs/:id" element={<Lab />} />
         <Route path="paths" element={<Paths />} />
         <Route path="progress" element={<Progress />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="docs" element={<Docs />} />
         <Route path="about" element={<About />} />
         <Route path="contribute" element={<Contribute />} />

@@ -31,9 +31,10 @@ const post = (path, payload) => request(path, { method: 'POST', headers: { 'Cont
 export const api = {
   health: () => request('/health'),
   modules: () => request('/modules'),
-  module: (id) => request(`/modules/${encodeURIComponent(id)}`),
-  hint: (id, n) => request(`/modules/${encodeURIComponent(id)}/hints/${n}`),
-  run: (id, mode, payload) => post(`/modules/${encodeURIComponent(id)}/${mode}`, payload),
-  flag: (id, flag) => post(`/modules/${encodeURIComponent(id)}/flag`, { flag }),
+  module: (id, mode = 'beginner') => request(`/modules/${encodeURIComponent(id)}?mode=${encodeURIComponent(mode)}`),
+  hint: (id, n, mode = 'beginner') => request(`/modules/${encodeURIComponent(id)}/hints/${n}?mode=${encodeURIComponent(mode)}`),
+  run: (id, side, payload) => post(`/modules/${encodeURIComponent(id)}/${side}`, payload),
+  flag: (id, flag, mode = 'beginner') => post(`/modules/${encodeURIComponent(id)}/flag`, { flag, mode }),
   validateFix: (id, code) => post(`/modules/${encodeURIComponent(id)}/fixit/validate`, { code }),
+  leaderboard: () => request('/leaderboard'),
 }

@@ -16,12 +16,22 @@ const MODULE = {
 
 function mockApi(overrides = {}) {
   globalThis.fetch = vi.fn(async (url, opts) => {
-    const path = String(url)
+    const full = String(url)
+    const path = full.split('?')[0]
+    const mode = new URL(full, 'http://lab.test').searchParams.get('mode') || 'beginner'
     const body = (data, status = 200) => ({ ok: status < 400, status, json: async () => data })
     if (overrides[path]) return body(...[].concat(overrides[path]))
     if (path === '/api/modules') return body([MODULE])
-    if (path === '/api/modules/llm01') return body(MODULE)
-    if (path === '/api/health') return body({ status: 'ok', modules: 1, ollama: { reachable: false, model: 'm', model_ready: false }, chroma: null })
+    if (path === '/api/modules/llm01') {
+      if (mode === 'beginner') return body(MODULE)
+      const rest = { ...MODULE }
+      delete rest.guided_steps // hard modes never receive the walkthrough
+      return body({ ...rest, example_payloads: [] })
+    }
+    if (path === '/api/health') return body({ status: 'ok', modules: 1, chroma: null,
+      engines: { groq: false, gemini: false, judge: 'off' } })
+    if (path === '/api/leaderboard') return body({ enabled: true, formula: 'flag 100 · fix-it 150 · explored 10',
+      entries: [{ rank: 1, display: 'Alice Shah', score: 550, flags: 2, fixes: 1, explored: 3, completed: 2 }], me: null })
     if (path.endsWith('/hints/1')) return body({ n: 1, total: 2, hint: 'First hint' })
     if (path.endsWith('/vulnerable')) return body({ output: 'leaked FLAG{x}', leaked: true, controls: [] })
     if (path.endsWith('/secure')) return body({ output: 'refused', leaked: false, controls: ['role separation'] })
@@ -38,7 +48,7 @@ describe('navigation and dashboard', () => {
 
   it('shows all main navigation entries', async () => {
     renderAt('/')
-    for (const name of ['Dashboard', 'Labs', 'Learning Paths', 'Progress', 'Documentation', 'About', 'Contribute']) {
+    for (const name of ['Dashboard', 'Labs', 'Learning Paths', 'Progress', 'Leaderboard', 'Documentation', 'About', 'Contribute']) {
       expect(screen.getByRole('link', { name })).toBeInTheDocument()
     }
   })
@@ -47,7 +57,7 @@ describe('navigation and dashboard', () => {
     renderAt('/')
     expect(await screen.findByText('Modules completed')).toBeInTheDocument()
     expect(screen.getByText('0/1')).toBeInTheDocument()
-    expect(await screen.findByText(/not reachable/)).toBeInTheDocument()
+    expect(await screen.findByText(/built-in simulator until a key is added/)).toBeInTheDocument()
   })
 
   it('lists labs with difficulty, mapping, time and prerequisites', async () => {
@@ -56,6 +66,20 @@ describe('navigation and dashboard', () => {
     expect(screen.getByText('20 min')).toBeInTheDocument()
     expect(screen.getByText('LLM01:2025 Prompt Injection')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Start lab' })).toHaveAttribute('href', '/labs/llm01')
+    // guides live inside the app now - nothing points at GitHub
+    expect(screen.queryByRole('link', { name: 'Guide' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/github\.com/)).not.toBeInTheDocument()
+  })
+
+  it('filters labs by level', async () => {
+    const user = userEvent.setup()
+    renderAt('/labs')
+    await screen.findByText('Prompt Injection')
+    await user.click(screen.getByRole('button', { name: 'Advanced' }))
+    expect(screen.queryByText('Prompt Injection')).not.toBeInTheDocument()
+    expect(screen.getByText('No labs at this level yet.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'All' }))
+    expect(screen.getByText('Prompt Injection')).toBeInTheDocument()
   })
 
   it('shows a clear error when the backend is unreachable', async () => {
@@ -108,11 +132,36 @@ describe('lab workflow and modes', () => {
     renderAt('/labs/llm01')
     await screen.findByText('Step one')
     await user.selectOptions(screen.getByLabelText('Learning mode'), 'advanced')
+    // the header shows the lab's fixed level as a toned badge plus the selected mode
+    expect(await screen.findByText('Mode: advanced')).toBeInTheDocument()
+    expect(screen.getByText('Level: Beginner')).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: 'Validate' }))
     expect(screen.getByLabelText('Fix-It code editor')).toHaveValue(MODULE.fixit.starter_code)
+    expect(screen.getByRole('button', { name: 'Submit flag' })).toBeInTheDocument() // flag stays available
     await user.click(screen.getByRole('button', { name: 'Validate fix' }))
     expect(await screen.findByText(/Fix validated/)).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('lll.progress.v1')).modules.llm01.fixit).toBe(true)
+  })
+
+  it('renders the complete written guide inside the page (no external links)', async () => {
+    const user = userEvent.setup()
+    renderAt('/labs/llm01')
+    await screen.findByText('Step one')
+    await user.click(screen.getByRole('tab', { name: 'Guide' }))
+    expect(await screen.findByText('LLM01 guided lab - Prompt Injection')).toBeInTheDocument()
+    expect(screen.getByText('Difficulty ladder')).toBeInTheDocument()
+    expect(screen.queryByText('Open the full written lab guide')).not.toBeInTheDocument()
+    expect(document.querySelector('a[href*="github.com"]')).toBeNull()
+  })
+
+  it('never exposes an engine picker - the server picks Groq or Gemini', async () => {
+    const user = userEvent.setup()
+    renderAt('/labs/llm01')
+    await screen.findByText('Step one')
+    await user.click(screen.getByRole('tab', { name: 'Exploit' }))
+    expect(screen.queryByLabelText('Engine')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Ollama/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Deterministic simulator/i)).not.toBeInTheDocument()
   })
 
   it('code tab shows vulnerable and secure implementations side by side', async () => {
@@ -125,14 +174,14 @@ describe('lab workflow and modes', () => {
   })
 
   it('surfaces API errors in the exploit panel', async () => {
-    mockApi({ '/api/modules/llm01/vulnerable': [{ detail: 'Ollama request failed' }, 503] })
+    mockApi({ '/api/modules/llm01/vulnerable': [{ detail: 'Groq is unreachable right now' }, 503] })
     const user = userEvent.setup()
     renderAt('/labs/llm01')
     await screen.findByText('Step one')
     await user.click(screen.getByRole('tab', { name: 'Exploit' }))
     await user.type(screen.getByLabelText('Your input'), 'hello')
     await user.click(screen.getByRole('button', { name: 'Run vulnerable' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Ollama request failed')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Groq is unreachable right now')
   })
 })
 
@@ -194,12 +243,43 @@ describe('generic tables and nested values', () => {
 })
 
 describe('learning paths', () => {
-  it('lists the RAG and cost tracks', async () => {
+  it('lists the RAG and cost tracks with progress', async () => {
     mockApi()
     renderAt('/paths')
     expect(await screen.findByText('RAG and knowledge integrity')).toBeInTheDocument()
     expect(screen.getByText('Availability and cost')).toBeInTheDocument()
     expect(screen.getByText('Trust and oversight')).toBeInTheDocument()
+    expect(screen.getAllByText('Start track').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/What you will learn/).length).toBeGreaterThan(0)
+  })
+})
+
+describe('leaderboard', () => {
+  it('renders ranked entries with score columns', async () => {
+    mockApi()
+    renderAt('/leaderboard')
+    expect(await screen.findByText('Global leaderboard')).toBeInTheDocument()
+    expect(screen.getByText('Alice Shah')).toBeInTheDocument()
+    expect(screen.getByText('550')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Score' })).toBeInTheDocument()
+  })
+
+  it('explains local mode when the leaderboard is disabled', async () => {
+    mockApi({ '/api/leaderboard': [{ enabled: false, entries: [], me: null, formula: 'flag 100 · fix-it 150 · explored 10' }] })
+    renderAt('/leaderboard')
+    expect(await screen.findByText(/connected to Supabase/)).toBeInTheDocument()
+  })
+})
+
+describe('profile', () => {
+  it('shows identity, statistics and cloud-mode hints', async () => {
+    mockApi()
+    renderAt('/profile')
+    expect(await screen.findByText('Anonymous learner')).toBeInTheDocument()
+    expect(screen.getByText('Local browser session')).toBeInTheDocument()
+    expect(screen.getByLabelText('Display name')).toBeInTheDocument()
+    expect(screen.getByText(/Sign in to save your name/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('New password')).not.toBeInTheDocument() // no session in tests
   })
 })
 
