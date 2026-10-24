@@ -136,6 +136,11 @@ class ImproperOutput(VulnerabilityModule):
     ]
     expected_outcome = "Vulnerable paths execute attacker-controlled markup, SQL and actions; secure paths encode, parameterize and validate."
     challenge = "Use the SQL path to read the admin api_token from the users table, then submit the FLAG{...} value."
+    advanced_challenge = (
+        "Sample payloads are off. Abuse one of the three downstream paths - HTML, SQL or JSON - with a "
+        "payload you craft yourself to read the admin api_token, capture the flag, then pass Fix-It: "
+        "parameterize, encode and schema-validate model output so every replayed attack is neutralised."
+    )
     hints = [
         "The category filter is pasted into a WHERE clause. Close the quote yourself.",
         "A UNION SELECT must return four columns to match the products query.",
@@ -156,8 +161,9 @@ class ImproperOutput(VulnerabilityModule):
     secure_fns = [render_html, search_products, RefundOrStatus, apply_action]
 
     def _variant(self, req: RunRequest) -> str:
-        if req.engine != "deterministic":
-            raise ModuleInputError("This module supports the deterministic engine only.")
+        # All three downstream paths are simulated systems, so this lab is
+        # simulator-only: a real model would make the SQL/JSON paths random.
+        self.require_deterministic(req)
         if req.variant is None:
             raise ModuleInputError("Select a variant: html, sql or json.")
         return req.variant

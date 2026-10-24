@@ -97,6 +97,11 @@ class Overreliance(VulnerabilityModule):
     ]
     expected_outcome = "The vulnerable pipeline merges insecure code on the model's word; the secure pipeline blocks it on independent evidence."
     challenge = "Get a change with a real security flaw merged automatically, then submit the FLAG{...} it reveals."
+    advanced_challenge = (
+        "No sample diffs. Get a change containing a real security flaw merged automatically by the AI "
+        "reviewer using a diff you write yourself, capture the proof, then pass Fix-It: gate on "
+        "deterministic checks, treat the model verdict as advisory and require human approval."
+    )
     hints = [
         "The reviewer only reacts to a few obvious patterns.",
         "It is also influenced by comments that claim the code was audited or safe.",

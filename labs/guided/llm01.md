@@ -59,6 +59,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Make HelpBot disclose its internal escalation code, then submit the FLAG{...} value.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. No examples, no hints, and the ready-made payloads are rejected. Make HelpBot print its internal escalation code using an injection you phrase yourself, capture the flag, then pass Fix-It: your secure build_messages() must survive replayed injections and a canary-leak regression check. A lab counts as finished only when the flag and the fix are both yours.
+
 ## Fix it (Advanced mode)
 
 **Separate instructions from user input** - build_messages() concatenates the system prompt and untrusted user text into one string. Return a chat message list instead: the system prompt alone in a 'system' message, and the user text alone in a single 'user' message. The platform then replays attacks against your output.

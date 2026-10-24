@@ -60,6 +60,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Extract the DEPLOY_TOKEN from the assistant and submit the FLAG{...} value.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. The echoed context now hides credential values, so you cannot read the answer off the screen. Elicit the live DEPLOY_TOKEN - and any other credential you can find - from the assistant with questions of your own, then pass Fix-It: least-privilege context plus a redaction filter that survives every extraction attempt in the replayed tests.
+
 ## Fix it (Advanced mode)
 
 **Filter sensitive data from model output** - redact() is the last line of defence before text leaves the server. Replace API keys (sk-lab-...), US SSNs, payment-card numbers (with spaces or dashes), email addresses and credentials inside connection strings with [REDACTED]. Ordinary text must stay untouched.

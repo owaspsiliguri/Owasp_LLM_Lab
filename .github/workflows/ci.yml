@@ -91,7 +91,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
-      - name: Scan Dockerfiles and compose (report only; upstream images such as ollama run as root by design)
+      - name: Scan Dockerfiles and compose (report only; upstream images such as ChromaDB run as root by design)
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: config

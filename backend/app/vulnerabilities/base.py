@@ -33,6 +33,10 @@ class VulnerabilityModule(ABC):
     guided_steps: ClassVar[list[str]]
     expected_outcome: ClassVar[str]
     challenge: ClassVar[str]
+    advanced_challenge: ClassVar[str]
+    # True when the module can run on a real LLM (Groq/Gemini) as well as the
+    # deterministic simulator. Simulated-infrastructure labs stay simulator-only.
+    supports_real_llm: ClassVar[bool] = False
     hints: ClassVar[list[str]]
     example_payloads: ClassVar[list[dict[str, str]]]
     remediation: ClassVar[str]
@@ -49,8 +53,9 @@ class VulnerabilityModule(ABC):
     def secure_demo(self, req: RunRequest) -> dict[str, Any]: ...
 
     def require_deterministic(self, req: RunRequest) -> None:
-        if req.engine != "deterministic":
-            raise ModuleInputError("This module uses the deterministic engine only.")
+        """Simulated-infrastructure labs only run on the built-in simulator."""
+        if req.engine != "sim":
+            raise ModuleInputError("This lab runs on the built-in simulator only; it does not use a real model.")
 
     def pick_variant(self, req: RunRequest) -> str:
         variant = req.variant or (self.variants[0] if self.variants else "")
@@ -83,7 +88,8 @@ class VulnerabilityModule(ABC):
         return {
             **self.summary(), "threat": self.threat, "impact": self.impact, "mitigation": self.mitigation,
             "guided_steps": self.guided_steps, "expected_outcome": self.expected_outcome,
-            "challenge": self.challenge, "hint_count": len(self.hints), "example_payloads": self.example_payloads,
+            "challenge": self.challenge, "advanced_challenge": self.advanced_challenge, "hint_count": len(self.hints),
+            "example_payloads": self.example_payloads,
             "remediation": self.remediation, "variants": self.variants,
             "variant_label": self.variant_label, "variant_help": self.variant_help,
             "vulnerable_code": self._source(self.vulnerable_fns), "secure_code": self._source(self.secure_fns),

@@ -59,6 +59,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Make the assistant confidently state a wrong or ungrounded throughput, then submit the FLAG{...} it reveals.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. Sample questions are rejected. Make the assistant confidently state a wrong or ungrounded throughput with a question you phrase yourself, capture the proof, then pass Fix-It: weighted sources, entity checks, citations and abstention - the replayed conflicts must all be refused.
+
 ## Fix it (Advanced mode)
 
 **Ground the answer or abstain** - answer_or_abstain(candidates, threshold=0.6) receives dicts with value, source, authority (0..1), age_days and superseded. Ignore superseded candidates and any with weight 0. weight = authority * 0.5 ** (age_days / 730). Group candidates by value (case-insensitive, stripped); confidence = weight of the heaviest group / total weight, rounded to 3 decimals. Return {'answer': the value of the first candidate in the winning group, or None, 'confidence': float, 'citations': [sources in the winning group, input order], 'abstained': bool}. Abstain (answer None, citations []) when nothing is eligible (confidence 0.0) or confidence < threshold.

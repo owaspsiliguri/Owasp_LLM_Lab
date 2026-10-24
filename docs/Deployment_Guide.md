@@ -228,7 +228,8 @@ service's current pricing page before a big course.
 | Admin console shows *Could not load admin data* | Same as above, or the anon key lacks read rights | Re-run schema; confirm `VITE_SUPABASE_ANON_KEY` is the publishable/anon key |
 | Progress missing for a student who never signed up | They are in local mode / browsing anonymously | They must create an account (share `/signup`) |
 | Labs LLM03 / LLM09 return 503 or the service restarts | ChromaDB (RAG labs) is memory-hungry on the free instance | Set env `CHROMA_URL` to an external Chroma server, or upgrade the Render instance |
-| Engine dropdown returns 503 for *Local model (Ollama)* | Ollama only exists in the local Docker stack | Use the **deterministic simulator** in the cloud (default) |
+| Labs return 503 mentioning Groq or Gemini | Key set on Render but wrong, revoked or rate-limited | Re-copy the key from console.groq.com/keys or aistudio.google.com/apikey, save (redeploys) |
+| Labs answer instantly and never mention a judge | No key configured | Expected: the built-in simulator runs without any key |
 | Flags changed after a redeploy | `LAB_SECRET` was not set | Set it (Part B.5); already-captured flags stay valid per installation only |
 | Vercel shows an old version | Cached build | Deployments → select latest → Redeploy; env-var changes always need a redeploy |
 

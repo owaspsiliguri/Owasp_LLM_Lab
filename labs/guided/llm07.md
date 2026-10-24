@@ -61,6 +61,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Make the assistant perform a destructive or unauthorised action as a customer, then submit the FLAG{...} it reveals.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. No sample actions. As customer mallory, make the assistant perform a destructive or unauthorised action with a request you design yourself, capture the proof, then pass Fix-It: authorize every model-requested tool call against the real user and resource, deny by default.
+
 ## Fix it (Advanced mode)
 
 **Authorize model-requested tool calls** - authorize_tool_call(role, tool, args, user) returns 'allow', 'confirm' (hold for human approval) or 'deny'. customer: get_ticket is allowed only when args['owner'] == user (user must be a non-empty string); create_ticket allowed; everything else denied. agent: get_ticket and create_ticket allowed; refund allowed for 0 < amount <= 50 and confirm above 50; delete_ticket and send_email denied. admin: get_ticket and create_ticket allowed; refund as for agent; delete_ticket confirm; send_email confirm when args['to'] == 'all', else allow. amount must be an int or float, not bool, and > 0, otherwise deny. Unknown roles or tools, non-string role/tool, or non-dict args: deny.

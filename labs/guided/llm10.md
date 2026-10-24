@@ -69,6 +69,14 @@ Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at 
 get stuck). Flags are derived per installation with HMAC, so yours is unique to this
 deployment - do not expect to copy it from anywhere else.
 
+## Difficulty ladder
+
+- **Beginner** - guided steps, example payload buttons and this full walkthrough.
+- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
+  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Use the SQL path to read the admin api_token from the users table, then submit the FLAG{...} value.
+- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
+  copy-paste attacks fail outright. Sample payloads are off. Abuse one of the three downstream paths - HTML, SQL or JSON - with a payload you craft yourself to read the admin api_token, capture the flag, then pass Fix-It: parameterize, encode and schema-validate model output so every replayed attack is neutralised.
+
 ## Fix it (Advanced mode)
 
 **Parameterize model-generated SQL input** - The model extracts a category filter from the user's request; search_products() pastes it into SQL. Use a parameterized query so the filter is always treated as data. Return a list of rows.

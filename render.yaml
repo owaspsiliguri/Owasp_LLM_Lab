@@ -30,3 +30,12 @@ services:
         sync: false
       - key: SUPABASE_JWT_SECRET
         sync: false
+      # Optional real-LLM engines and judge. Leave empty for the deterministic
+      # engine; add a key to unlock Groq/Gemini in the engine dropdown and the
+      # independent LLM judge (console.groq.com/keys or aistudio.google.com/apikey).
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JUDGE_PROVIDER
+        value: auto

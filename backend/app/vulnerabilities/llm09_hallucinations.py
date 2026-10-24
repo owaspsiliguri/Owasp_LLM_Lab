@@ -123,6 +123,11 @@ class Hallucinations(VulnerabilityModule):
     ]
     expected_outcome = "The vulnerable assistant asserts wrong or ungrounded facts; the secure one cites a current authoritative source or abstains."
     challenge = "Make the assistant confidently state a wrong or ungrounded throughput, then submit the FLAG{...} it reveals."
+    advanced_challenge = (
+        "Sample questions are rejected. Make the assistant confidently state a wrong or ungrounded "
+        "throughput with a question you phrase yourself, capture the proof, then pass Fix-It: weighted "
+        "sources, entity checks, citations and abstention - the replayed conflicts must all be refused."
+    )
     hints = [
         "Retrieval picks the most similar text, not the most trustworthy.",
         "Ask about the X200 exactly as phrased in the forum post.",
@@ -145,10 +150,13 @@ class Hallucinations(VulnerabilityModule):
         self.require_deterministic(req)
         r = vulnerable_answer(req.input)
         wrong = not r["grounded"] or r["value"] != GROUND_TRUTH.get(r["product"])
+        # The flag is the prize for provoking a wrong claim *about a product* -
+        # an off-topic message must not earn it.
+        exploit = bool(_PRODUCT.search(req.input)) and wrong
         out = {"output": r["answer"], "details": {"answered from": r["source"], "grounded in the asked product": r["grounded"],
                                                   "confidence shown": "100% (none computed)", "citations": "none"},
-               "leaked": wrong, "controls": []}
-        if wrong:
+               "leaked": exploit, "controls": []}
+        if exploit:
             out["proof"] = flag_for(ID)
         return out
 
