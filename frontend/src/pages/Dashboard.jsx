@@ -20,8 +20,9 @@ export default function Dashboard() {
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="mt-1 max-w-prose text-fog-300">Learn how classic LLM applications fail, exploit them in a safe local lab, then fix the code and prove the fix works.</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <Stat label="Modules completed" value={`${s.completed}/${s.total}`} />
+        <Stat label="Points earned" value={`${s.score} / ${s.maxScore}`} />
         <Stat label="Vulnerabilities explored" value={s.explored} />
         <Stat label="Flags captured" value={s.flags} />
         <Stat label="Fix-It challenges completed" value={s.fixes} />

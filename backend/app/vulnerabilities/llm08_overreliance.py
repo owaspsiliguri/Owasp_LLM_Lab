@@ -64,7 +64,7 @@ class Overreliance(VulnerabilityModule):
     id = ID
     fixit_key = "llm08"
     name = "Overreliance on LLM Output"
-    category = "LLM09:2023 Overreliance"
+    category = "LLM09:2025 Misinformation (overreliance)"
     owasp_id = "LLM08"
     difficulty = "Advanced"
     estimated_minutes = 25

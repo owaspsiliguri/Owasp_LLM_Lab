@@ -119,7 +119,9 @@ class VectorWeaknesses(VulnerabilityModule):
     fixit_key = "llm12"
     name = "Vector and Embedding Weaknesses (multi-tenant RAG)"
     category = "LLM08:2025 Vector and Embedding Weaknesses"
-    owasp_id = "LLM08"
+    # Lab number, not the OWASP category number (which is LLM08 and would
+    # collide with the Overreliance lab's badge).
+    owasp_id = "LLM12"
     difficulty = "Advanced"
     supports_real_llm = False
     estimated_minutes = 35

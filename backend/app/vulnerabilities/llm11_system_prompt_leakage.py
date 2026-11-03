@@ -101,7 +101,9 @@ class SystemPromptLeakage(VulnerabilityModule):
     fixit_key = "llm11"
     name = "System Prompt Leakage"
     category = "LLM07:2025 System Prompt Leakage"
-    owasp_id = "LLM07"
+    # The badge shows the lab number (llm11), the category shows the OWASP
+    # 2025 mapping. Using the OWASP number here collided with lab LLM07.
+    owasp_id = "LLM11"
     difficulty = "Beginner"
     supports_real_llm = False
     estimated_minutes = 25

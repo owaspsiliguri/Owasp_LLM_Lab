@@ -148,7 +148,8 @@ describe('lab workflow', () => {
     await screen.findByText('Step one')
     await user.click(screen.getByRole('tab', { name: 'Guide' }))
     expect(await screen.findByText('LLM01 guided lab - Prompt Injection')).toBeInTheDocument()
-    expect(screen.getByText('Difficulty ladder')).toBeInTheDocument()
+    expect(screen.getByText("This lab's level: Beginner")).toBeInTheDocument()
+    expect(screen.getByText('Point value')).toBeInTheDocument()
     expect(screen.queryByText('Open the full written lab guide')).not.toBeInTheDocument()
     expect(document.querySelector('a[href*="github.com"]')).toBeNull()
   })
@@ -181,6 +182,45 @@ describe('lab workflow', () => {
     await user.type(screen.getByLabelText('Your input'), 'hello')
     await user.click(screen.getByRole('button', { name: 'Run vulnerable' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Groq is unreachable right now')
+  })
+})
+
+describe('scoring and lab navigation', () => {
+  beforeEach(() => mockApi({ '/api/modules': [[MODULE, ADVANCED]] }))
+
+  it('shows what each step of the lab is worth and the running total', async () => {
+    renderAt('/labs/llm01')
+    await screen.findByText('Step one')
+    expect(screen.getByText('Points in this lab')).toBeInTheDocument()
+    expect(screen.getByText('+10')).toBeInTheDocument()
+    expect(screen.getByText('+100')).toBeInTheDocument()
+    expect(screen.getByText('+150')).toBeInTheDocument()
+    expect(screen.getByText('260 pts')).toBeInTheDocument()
+    expect(screen.getByText('0 / 260 pts')).toBeInTheDocument()
+  })
+
+  it('links to the previous and next lab', async () => {
+    renderAt('/labs/llm01')
+    await screen.findByText('Step one')
+    const nav = screen.getByRole('navigation', { name: 'Lab navigation' })
+    expect(nav).toHaveTextContent('LLM07: Excessive Agency')
+    expect(nav.querySelector('a[href="/labs/llm07"]')).not.toBeNull()
+  })
+
+  it('submits the flag when Enter is pressed', async () => {
+    const user = userEvent.setup()
+    renderAt('/labs/llm01')
+    await screen.findByText('Step one')
+    await user.click(screen.getByRole('tab', { name: 'Validate' }))
+    await user.type(screen.getByLabelText('Flag'), 'FLAG{{ok}{enter}')
+    await waitFor(() => expect(JSON.parse(localStorage.getItem('lll.progress.v1')).modules.llm01.flag).toBe(true))
+  })
+
+  it('shows the point value and score of every lab in the catalogue', async () => {
+    renderAt('/labs')
+    await screen.findByText('Prompt Injection')
+    expect(screen.getAllByText('260 pts').length).toBe(2)
+    expect(screen.getAllByText('0 / 260 pts').length).toBe(2)
   })
 })
 

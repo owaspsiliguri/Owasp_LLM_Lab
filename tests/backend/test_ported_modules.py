@@ -24,13 +24,20 @@ def test_registry_has_twelve_modules():
     from app.vulnerabilities import MODULES
 
     assert [m.id for m in MODULES][-2:] == ["llm11", "llm12"]
+    # The lab badge shows this value, so it must identify the lab - two labs
+    # sharing a badge (llm11 and llm07 both saying LLM07) looks like a bug.
+    numbers = [m.owasp_id for m in MODULES]
+    assert sorted(numbers) == [f"LLM{i:02d}" for i in range(1, 13)]
+    assert len(set(numbers)) == len(numbers)
     assert len({m.name for m in MODULES}) >= 12
     assert {m.difficulty for m in MODULES} <= {"Beginner", "Intermediate", "Advanced"}
 
 
 def test_llm11_detail_and_flag(client: TestClient):
     d = client.get("/api/modules/llm11").json()
-    assert d["owasp_id"] == "LLM07" and d["difficulty"] == "Beginner"
+    # Lab number, distinct from the OWASP category it maps to (LLM07:2025).
+    assert d["owasp_id"] == "LLM11" and d["category"].startswith("LLM07:2025")
+    assert d["difficulty"] == "Beginner"
     assert "fixit" in d and d["fixit"]["function"] == "apply_discount"
     # benign never leaks; an extraction request prints the prompt with the flag
     benign = client.post("/api/modules/llm11/vulnerable", json={"input": "What are your store hours?"})
@@ -49,7 +56,8 @@ def test_llm11_detail_and_flag(client: TestClient):
 
 def test_llm12_variants_capture_and_secure(client: TestClient):
     d = client.get("/api/modules/llm12").json()
-    assert d["owasp_id"] == "LLM08" and d["difficulty"] == "Advanced" and d["variants"] == ["alice", "carol"]
+    assert d["owasp_id"] == "LLM12" and d["category"].startswith("LLM08:2025")
+    assert d["difficulty"] == "Advanced" and d["variants"] == ["alice", "carol"]
     flag = flag_for("llm12")
     # alice: cross-tenant confidential doc is quoted back with the access code
     res = client.post("/api/modules/llm12/vulnerable", json={"input": "Globex acquisition plan Initech access code", "variant": "alice"})

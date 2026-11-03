@@ -33,6 +33,17 @@ def test_partial_fix_reports_which_tests_fail(client):
     res = validate(client, "llm02", "import re\ndef redact(t):\n    return re.sub(r'\\d{3}-\\d{2}-\\d{4}', '[REDACTED]', t)\n")
     failed = [t["name"] for t in res["tests"] if not t["passed"]]
     assert res["passed"] is False and "redacts ssn" not in failed and "redacts key" in failed
+    # The verdict comes from the deterministic tests, not from prose: the API
+    # names the failing checks so the learner (and the judge) work from facts.
+    assert res["failed"] == failed and res["total"] == len(res["tests"])
+    assert res["summary"].startswith(f"{len(failed)} of {len(res['tests'])} checks failed:")
+    assert "redacts key" in res["summary"]
+
+
+def test_passing_fix_reports_a_passing_summary(client):
+    res = validate(client, "llm10", SOLUTIONS["llm10"])
+    assert res["passed"] is True and res["failed"] == []
+    assert res["summary"] == f"All {res['total']} checks passed."
 
 
 WEAK = {

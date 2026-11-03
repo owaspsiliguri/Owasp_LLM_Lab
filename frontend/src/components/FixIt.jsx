@@ -33,9 +33,10 @@ export default function FixIt({ module }) {
       {result && (
         <section aria-label="Validation result" className="panel p-3">
           <p className={result.passed ? 'font-medium text-safe-400' : 'font-medium text-vuln-400'}>{result.passed ? 'Fix validated: the vulnerability is mitigated.' : 'Not fixed yet.'}</p>
+          {result.summary && <p className="mt-1 whitespace-pre-line text-sm text-fog-300">{result.summary}</p>}
           {result.error && <p className="mt-1 text-warn-400">{result.error}</p>}
           <ul className="mt-2 space-y-1 text-sm">
-            {result.tests.map((t) => (
+            {[...(result.tests || [])].sort((a, b) => Number(a.passed) - Number(b.passed)).map((t) => (
               <li key={t.name} className={t.passed ? 'text-safe-400' : 'text-vuln-400'}>
                 {t.passed ? 'Pass' : 'Fail'}: {t.name}{!t.passed && t.detail ? ` (${t.detail})` : ''}
               </li>
@@ -43,7 +44,7 @@ export default function FixIt({ module }) {
           </ul>
           {result.review && (
             <p aria-label="LLM judge review" className="mt-3 rounded border border-steel-400/40 bg-ink-950 p-2 text-sm text-fog-300">
-              <span className="font-medium text-steel-400">Instructor review (LLM judge):</span> {result.review}
+              <span className="font-medium text-steel-400">Second opinion (LLM, advisory — the checks above decide the result):</span> {result.review}
             </p>
           )}
         </section>
