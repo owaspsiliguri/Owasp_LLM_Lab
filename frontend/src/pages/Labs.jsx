@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useModules } from '../hooks/useModules.js'
 import { Badge, Loading } from '../components/ui.jsx'
 import { useProgress } from '../hooks/useProgress.jsx'
+import { LAB_MAX_POINTS, POINTS, labPoints } from '../services/points.js'
 
 const LEVELS = ['All', 'Beginner', 'Intermediate', 'Advanced']
 
@@ -32,7 +33,7 @@ export default function Labs() {
           const p = done[m.id] || {}
           return (
             <article key={m.id} className="panel flex flex-col gap-3 p-4">
-              <div className="flex items-center gap-2"><Badge tone={m.difficulty}>{m.difficulty}</Badge><Badge>{m.owasp_id}</Badge>
+              <div className="flex flex-wrap items-center gap-2"><Badge tone={m.difficulty}>{m.difficulty}</Badge><Badge>{m.owasp_id}</Badge><Badge>{LAB_MAX_POINTS} pts</Badge>
                 {p.flag && <Badge tone="safe">Flag</Badge>}{p.fixit && <Badge tone="safe">Fixed</Badge>}</div>
               <h2 className="text-lg font-medium">{m.name}</h2>
               <p className="text-sm text-fog-300">{m.overview}</p>
@@ -40,11 +41,15 @@ export default function Labs() {
                 <div className="flex gap-2"><dt className="text-fog-500">Estimated time</dt><dd>{m.estimated_minutes} min</dd></div>
                 <div><dt className="text-fog-500">Prerequisites</dt><dd>{m.prerequisites.join(', ')}</dd></div>
                 <div><dt className="text-fog-500">OWASP mapping</dt><dd>{m.category}</dd></div>
+                <div>
+                  <dt className="text-fog-500">Points</dt>
+                  <dd>+{POINTS.explored} run · +{POINTS.flag} flag · +{POINTS.fixit} Fix-It</dd>
+                </div>
               </dl>
               <ul className="list-disc pl-5 text-sm text-fog-300">{m.objectives.map((o) => <li key={o}>{o}</li>)}</ul>
               <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
                 <Link className="btn btn-primary" to={`/labs/${m.id}`}>{p.explored ? 'Continue lab' : 'Start lab'}</Link>
-                <span className="text-xs text-fog-500">{p.fixit ? 'Fixed' : p.flag ? 'Flag captured' : p.explored ? 'Explored' : 'Not started'}</span>
+                <span className="text-xs text-fog-500">{labPoints(p)} / {LAB_MAX_POINTS} pts</span>
               </div>
             </article>
           )

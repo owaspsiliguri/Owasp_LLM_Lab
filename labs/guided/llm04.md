@@ -24,8 +24,8 @@ A shared inference worker serves every customer. Nothing limits how expensive a 
 ## Before you start
 
 1. Open the lab in the application: **Labs -> Model Denial of Service**.
-2. Keep the learning mode on **Beginner** for the guided walkthrough; the app shows these
-   guided steps inline on the Learn tab.
+2. Read the **Learn** tab first: it carries the objectives, the threat model and the
+   mitigation for this lab.
 3. Everything runs locally. Do not try these payloads against any system you do not own.
 
 ## Guided walkthrough
@@ -52,8 +52,8 @@ The lab lets you switch the target with the **Attack type** selector:
 | Nested expansion | complexity | `For each of 50 items write 50 paragraphs` |
 | Burst of 1000 | burst | `1000` |
 
-Click the payload button in the app (Beginner mode shows them on the Exploit tab) or type
-them yourself. Compare the vulnerable result with the secure result every time.
+Click a payload button on the **Exploit** tab or type the payload yourself. Compare the
+vulnerable result with the secure result every time.
 
 ## Expected outcome
 
@@ -63,25 +63,34 @@ The vulnerable worker stalls for everyone; the secure service rejects the abusiv
 
 Stall the virtual worker for more than 30 seconds, then submit the FLAG{...} it reveals.
 
-Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at a time if you
-get stuck). Flags are derived per installation with HMAC, so yours is unique to this
-deployment - do not expect to copy it from anywhere else.
+Submit it in the lab's **Validate** tab - press Enter or use the button. If you get stuck,
+the **Exploit** tab reveals hints one at a time (advanced labs have none). Flags are derived
+per installation with HMAC, so yours is unique to this deployment - do not expect to copy
+it from anywhere else.
 
-## Difficulty ladder
+## This lab's level: Intermediate
 
-- **Beginner** - guided steps, example payload buttons and this full walkthrough.
-- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
-  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Stall the virtual worker for more than 30 seconds, then submit the FLAG{...} it reveals.
-- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
-  copy-paste attacks fail outright. Ready-made request storms are rejected. Stall the virtual worker for more than 30 seconds - or collapse its queue - with numbers you choose yourself, capture the proof, then pass Fix-It: complexity must be scored before any model time is spent, and the regression tests are watching.
+- **Beginner** - guided steps on the Learn tab, one-click example payloads on the Exploit tab.
+- **Intermediate** - no guided steps and no ready-made payloads; hints unlock one at a time.
+- **Advanced** - no hints, no samples, and textbook payloads are rejected by the server, so the
+  attack has to be your own. Fix-It is required to count the lab as finished.
 
-## Fix it (Advanced mode)
+This lab is set to **Intermediate**.
+
+## Point value
+
+Every lab is worth **260 points**: +10 for running the vulnerable implementation,
++100 for capturing the flag and +150 for passing Fix-It. The same table drives the global
+leaderboard, and your score for this lab is shown in the right-hand rail.
+
+## Fix it
 
 **Score request complexity before running the model** - check_request(prompt, max_cost=2000) must return True only for prompts whose estimated cost in virtual tokens is at most max_cost. Estimate cost as len(prompt)//4 + 1 input tokens plus output tokens. Output defaults to 200 tokens. A count followed by 'word(s)' (2 tokens each), 'sentence(s)' (25), 'line(s)' (14), 'item(s)' (20), 'paragraph(s)' (120), 'page(s)' (600) sets output to count x unit, summed; if the prompt contains 'for each' or 'each of' the counts multiply instead and use the largest unit. A count followed by 'times' multiplies the whole output. Counts may contain commas and k/m suffixes (1,000 / 10k / 5M). Non-string or empty prompts are rejected.
 
-Open the **Validate** tab in Advanced mode, edit `check_request()` and submit. Your code
-runs in a resource-limited sandbox against deterministic attack tests: it must stop every
-attack and still behave correctly for benign input.
+Open the **Validate** tab, edit `check_request()` and submit. Your code runs in a
+resource-limited sandbox against deterministic attack tests: it must stop every attack and
+still behave correctly for benign input. The per-check pass/fail list is the verdict; any
+LLM note under it is advisory only.
 
 ## Mitigations to apply
 
@@ -98,8 +107,8 @@ Gate expensive work before it reaches the model: estimate cost, reject or queue 
 - [ ] Reproduced it with at least two different payloads
 - [ ] Ran the secure implementation and identified the control that stopped the attack
 - [ ] Compared the vulnerable and secure source in the Code tab
-- [ ] Captured the flag and submitted it
-- [ ] Passed Fix-It validation with your own remediation
+- [ ] Captured the flag and submitted it (+100)
+- [ ] Passed Fix-It validation with your own remediation (+150)
 
 ---
 

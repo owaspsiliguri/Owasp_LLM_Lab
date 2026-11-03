@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { api } from '../services/api.js'
+import { useModules } from '../hooks/useModules.js'
 import { useProgress } from '../hooks/useProgress.jsx'
+import { LAB_MAX_POINTS, POINTS, POINT_ROWS, labPoints } from '../services/points.js'
 import { Badge, CodeBlock, Loading } from '../components/ui.jsx'
 import Markdown from '../components/Markdown.jsx'
 import RunPanel from '../components/RunPanel.jsx'
@@ -37,21 +39,31 @@ function FlagForm({ module }) {
   const { mark } = useProgress()
   const [flag, setFlag] = useState('')
   const [msg, setMsg] = useState(null)
-  async function submit(e) {
-    e.preventDefault()
+  const [busy, setBusy] = useState(false)
+  async function send() {
+    const value = flag.trim()
+    if (!value || busy) return
+    setBusy(true)
     try {
-      const r = await api.flag(module.id, flag)
+      const r = await api.flag(module.id, value)
       setMsg({ ok: r.correct, text: r.message })
       if (r.correct) mark(module.id, 'flag')
-    } catch (err) { setMsg({ ok: false, text: err.message }) }
+    } catch (err) {
+      setMsg({ ok: false, text: err.message })
+    } finally { setBusy(false) }
   }
   return (
-    <form onSubmit={submit} className="space-y-2">
+    <form onSubmit={(e) => { e.preventDefault(); send() }} className="space-y-2">
       <p className="text-fog-300">{module.challenge}</p>
+      <p className="text-sm text-fog-500">Capturing the flag is worth <strong className="text-safe-400">{POINTS.flag} points</strong>. Press Enter or use the button to submit.</p>
       <label className="block text-sm text-fog-300">Flag
-        <input aria-label="Flag" className="input mt-1" value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="FLAG{...}" maxLength={200} />
+        <input
+          aria-label="Flag" className="input mt-1" value={flag} placeholder="FLAG{...}" maxLength={200}
+          onChange={(e) => setFlag(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send() } }}
+        />
       </label>
-      <button className="btn btn-primary" type="submit" disabled={!flag.trim()}>Submit flag</button>
+      <button className="btn btn-primary" type="submit" disabled={busy || !flag.trim()}>{busy ? 'Checking…' : 'Submit flag'}</button>
       {msg && <p role="status" className={msg.ok ? 'text-safe-400' : 'text-vuln-400'}>{msg.text}</p>}
     </form>
   )
@@ -77,11 +89,7 @@ function Rules({ difficulty }) {
 // simply stacks below the content, so no space is wasted and nothing hides.
 function Sidebar({ module, done }) {
   const { modules: all } = useProgress()
-  const steps = [
-    ['Explored the vulnerability', done.explored],
-    ['Captured the flag', done.flag],
-    ['Passed Fix-It validation', done.fixit],
-  ]
+  const earned = labPoints(done)
   return (
     <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start" aria-label="Lab information">
       <section className="panel p-4">
@@ -90,6 +98,7 @@ function Sidebar({ module, done }) {
           <div className="flex justify-between gap-2"><dt className="text-fog-500">Level</dt><dd>{module.difficulty}</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-fog-500">Time</dt><dd>{module.estimated_minutes} min</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-fog-500">OWASP</dt><dd>{module.owasp_id}</dd></div>
+          <div className="flex justify-between gap-2"><dt className="text-fog-500">Points</dt><dd className="font-semibold text-steel-400">{earned} / {LAB_MAX_POINTS}</dd></div>
         </dl>
       </section>
       <section className="panel p-4">
@@ -97,15 +106,25 @@ function Sidebar({ module, done }) {
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-fog-300">{module.prerequisites.map((p) => <li key={p}>{p}</li>)}</ul>
       </section>
       <section className="panel p-4">
-        <h2 className="font-medium">Your progress</h2>
+        <h2 className="font-medium">Points in this lab</h2>
         <ul className="mt-2 space-y-1 text-sm">
-          {steps.map(([label, ok]) => (
-            <li key={label} className="flex items-center gap-2">
-              <span aria-hidden className={ok ? 'text-safe-400' : 'text-fog-500'}>{ok ? '✔' : '○'}</span>
-              <span className={ok ? 'text-fog-100' : 'text-fog-300'}>{label}</span>
-            </li>
-          ))}
+          {POINT_ROWS.map(({ field, label, points }) => {
+            const ok = Boolean(done[field])
+            return (
+              <li key={field} className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <span aria-hidden className={ok ? 'text-safe-400' : 'text-fog-500'}>{ok ? '✔' : '○'}</span>
+                  <span className={ok ? 'text-fog-100' : 'text-fog-300'}>{label}</span>
+                </span>
+                <span className={ok ? 'text-safe-400' : 'text-fog-500'}>+{points}</span>
+              </li>
+            )
+          })}
         </ul>
+        <div className="mt-3 flex items-center justify-between border-t border-ink-700 pt-2 text-sm">
+          <span className="text-fog-500">Earned here</span>
+          <span className="font-semibold text-steel-400">{earned} / {LAB_MAX_POINTS} pts</span>
+        </div>
         <p className="mt-3 text-xs text-fog-500">{Object.keys(all).length ? 'Synced to your account when signed in.' : ''}</p>
       </section>
       <Rules difficulty={module.difficulty} />
@@ -113,9 +132,24 @@ function Sidebar({ module, done }) {
   )
 }
 
+// Jump straight to the neighbouring lab instead of going back to the catalogue.
+function LabNav({ prev, next }) {
+  return (
+    <nav aria-label="Lab navigation" className="flex flex-wrap items-center justify-between gap-2 border-t border-ink-700 pt-4">
+      <Link className="btn max-w-full" to={prev ? `/labs/${prev.id}` : '/labs'}>
+        <span className="truncate">{prev ? `← ${prev.owasp_id}: ${prev.name}` : '← All labs'}</span>
+      </Link>
+      <Link className="btn btn-primary max-w-full" to={next ? `/labs/${next.id}` : '/labs'}>
+        <span className="truncate">{next ? `${next.owasp_id}: ${next.name} →` : 'Back to all labs →'}</span>
+      </Link>
+    </nav>
+  )
+}
+
 export default function Lab() {
   const { id } = useParams()
   const { modules } = useProgress()
+  const { modules: catalog } = useModules()
   const [module, setModule] = useState(null)
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('Learn')
@@ -129,6 +163,9 @@ export default function Lab() {
   const done = modules[id] || {}
   const guide = GUIDES[id]
   const level = module.difficulty.toLowerCase()
+  const index = catalog.findIndex((m) => m.id === id)
+  const prev = index > 0 ? catalog[index - 1] : null
+  const next = index >= 0 && index < catalog.length - 1 ? catalog[index + 1] : null
 
   return (
     <div className="space-y-5 xl:grid xl:grid-cols-[minmax(0,1fr)_19rem] xl:items-start xl:gap-8">
@@ -137,6 +174,7 @@ export default function Lab() {
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={module.difficulty}>Level: {module.difficulty}</Badge>
             <Badge>{module.owasp_id}</Badge><Badge>{module.estimated_minutes} min</Badge>
+            <Badge>{LAB_MAX_POINTS} pts</Badge>
             {done.explored && <Badge>Explored</Badge>}{done.flag && <Badge>Flag captured</Badge>}{done.fixit && <Badge>Fixed</Badge>}
           </div>
           <h1 className="mt-2 text-2xl font-semibold">{module.name}</h1>
@@ -182,16 +220,17 @@ export default function Lab() {
         {tab === 'Validate' && (
           <div className="space-y-5">
             <section className="panel p-4"><h2 className="mb-3 font-medium">Capture the flag</h2><FlagForm module={module} /></section>
-            {level === 'advanced' && (
-              <section className="panel border-vuln-400/40 p-4">
-                <h2 className="mb-1 font-medium">Fix-It — required to complete</h2>
-                <p className="mb-3 text-sm text-fog-300">An advanced lab is finished only when the flag is captured <em>and</em> your remediation passes the sandboxed attack replay.</p>
-                <FixIt module={module} />
-              </section>
-            )}
-            {level === 'intermediate' && (
-              <p className="text-sm text-fog-500">Reaching an advanced lab unlocks the Fix-It challenge — the hardest layer of the platform.</p>
-            )}
+            <section className={`panel p-4 ${level === 'advanced' ? 'border-vuln-400/40' : ''}`}>
+              <h2 className="mb-1 font-medium">
+                Fix-It — {level === 'advanced' ? 'required to complete' : 'optional, worth extra points'}
+              </h2>
+              <p className="mb-3 text-sm text-fog-300">
+                Rewrite the vulnerable function so the sandboxed attack replay fails, and still behave correctly for legitimate input.
+                Passing it is worth <strong className="text-safe-400">150 points</strong>
+                {level === 'advanced' ? ', and an advanced lab only counts as finished when the flag and Fix-It are both done.' : '.'}
+              </p>
+              <FixIt module={module} />
+            </section>
           </div>
         )}
 
@@ -200,6 +239,8 @@ export default function Lab() {
             {guide ? <Markdown source={guide} /> : <p className="text-fog-300">No guide compiled for this module yet.</p>}
           </article>
         )}
+
+        <LabNav prev={prev} next={next} />
       </div>
 
       <Sidebar module={module} done={done} />

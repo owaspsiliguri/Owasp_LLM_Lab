@@ -90,7 +90,7 @@ class Hallucinations(VulnerabilityModule):
     id = ID
     fixit_key = "llm09"
     name = "Hallucinations and Misinformation"
-    category = "LLM09:2025 Misinformation"
+    category = "LLM09:2025 Misinformation (hallucination)"
     owasp_id = "LLM09"
     difficulty = "Advanced"
     estimated_minutes = 35

@@ -18,13 +18,18 @@ Recommended order for the whole path: llm01, llm02, llm10, llm03, llm05, llm04, 
 | 8 | Supply Chain Vulnerabilities | LLM05 | Intermediate | [llm05.md](llm05.md) |
 | 9 | Excessive Agency | LLM07 | Advanced | [llm07.md](llm07.md) |
 | 10 | Overreliance on LLM Output | LLM08 | Advanced | [llm08.md](llm08.md) |
+| 11 | System Prompt Leakage | LLM11 | Beginner | [llm11.md](llm11.md) |
+| 12 | Vector and Embedding Weaknesses (multi-tenant RAG) | LLM12 | Advanced | [llm12.md](llm12.md) |
 
 ## How to use a guide
 
-1. Open the lab in the application (**Labs** -> pick a module), mode **Beginner**.
+1. Open the lab in the application (**Labs** -> pick a module).
 2. Follow the guide side by side with the Learn and Exploit tabs.
-3. Use the payload table, compare vulnerable vs. secure output, then read the Code tab.
-4. Submit the flag (Intermediate), then fix the code and pass Fix-It validation (Advanced).
+3. Use the payload table where the lab has one, compare vulnerable vs. secure output, then
+   read the Code tab.
+4. Submit the flag, then rewrite the vulnerable function and pass Fix-It validation.
+5. Every lab is worth 260 points (+10 run, +100 flag, +150 Fix-It); totals feed the
+   global leaderboard.
 
 The guides contain no flags: every installation derives its own with HMAC.
 

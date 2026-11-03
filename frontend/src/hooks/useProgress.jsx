@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useAuth } from './useAuth.jsx'
 import { supabase } from '../services/supabase.js'
+import { LAB_MAX_POINTS, scoreOf } from '../services/points.js'
 
 const KEY = 'lll.progress.v1'
 const EMPTY = { modules: {} }
@@ -98,5 +99,10 @@ export function summarize(modules, progress) {
   const flags = modules.filter((m) => p(m.id).flag).length
   const fixes = modules.filter((m) => p(m.id).fixit).length
   const completed = modules.filter((m) => p(m.id).flag && p(m.id).fixit).length
-  return { total, explored, flags, fixes, completed, percent: total ? Math.round(((explored + flags + fixes) / (total * 3)) * 100) : 0 }
+  return {
+    total, explored, flags, fixes, completed,
+    score: scoreOf(modules, progress),
+    maxScore: total * LAB_MAX_POINTS,
+    percent: total ? Math.round(((explored + flags + fixes) / (total * 3)) * 100) : 0,
+  }
 }

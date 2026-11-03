@@ -19,6 +19,21 @@ router = APIRouter()
 log = logging.getLogger("lab.api")
 
 
+def _failure_brief(result: dict[str, Any]) -> str:
+    """Deterministic description of a failed Fix-It run.
+
+    The sandbox tests are authoritative, so the feedback the learner sees is
+    derived from them: the names of the checks that failed and why. An LLM
+    review is only ever added on top of this as advisory prose.
+    """
+    tests = result.get("tests") or []
+    failed = [t for t in tests if not t.get("passed")]
+    if failed:
+        lines = [f"- {t.get('name')}" + (f" ({t['detail']})" if t.get("detail") else "") for t in failed[:12]]
+        return f"{len(failed)} of {len(tests)} checks failed:\n" + "\n".join(lines)
+    return str(result.get("error") or "the sandbox reported no passing result")
+
+
 def _get(module_id: str) -> VulnerabilityModule:
     module = REGISTRY.get(module_id)
     if module is None:
@@ -137,9 +152,14 @@ async def submit_flag(module_id: str, req: FlagRequest, user: OptionalUser) -> d
 async def validate_fix(module_id: str, req: FixRequest, user: OptionalUser) -> dict[str, Any]:
     m = _get(module_id)
     result = await asyncio.to_thread(m.validate_fix, req.code)
+    tests = result.get("tests") or []
+    failed = [t for t in tests if not t.get("passed")]
+    result["failed"] = [str(t.get("name")) for t in failed]
+    result["total"] = len(tests)
+    result["summary"] = _failure_brief(result) if not result.get("passed") else f"All {len(tests)} checks passed."
     if user:
         passed = bool(result.get("passed"))
-        detail = None if passed else (result.get("error") or "validation tests failed")
+        detail = None if passed else result["summary"]
         await store.record_attempt(user["id"], module_id, "fixit", correct=passed, detail=detail[:400] if detail else None)
         if passed:
             await store.upsert_progress(user["id"], module_id, fixit=True)
@@ -152,7 +172,7 @@ async def validate_fix(module_id: str, req: FixRequest, user: OptionalUser) -> d
                 title=spec.TITLE,
                 brief=spec.BRIEF,
                 code=req.code,
-                error=str(result.get("error") or "validation tests failed"),
+                error=result["summary"],
             )
             if review:
                 result["review"] = review

@@ -24,8 +24,8 @@ A document assistant keeps calling the model while the model says it has more to
 ## Before you start
 
 1. Open the lab in the application: **Labs -> Unbounded Consumption**.
-2. Keep the learning mode on **Beginner** for the guided walkthrough; the app shows these
-   guided steps inline on the Learn tab.
+2. Read the **Learn** tab first: it carries the objectives, the threat model and the
+   mitigation for this lab.
 3. Everything runs locally. Do not try these payloads against any system you do not own.
 
 ## Guided walkthrough
@@ -43,8 +43,8 @@ A document assistant keeps calling the model while the model says it has more to
 | Normal prompt | - | `Summarize our refund policy.` |
 | Runaway loop | - | `List primes and keep going until you have listed all of them.` |
 
-Click the payload button in the app (Beginner mode shows them on the Exploit tab) or type
-them yourself. Compare the vulnerable result with the secure result every time.
+Click a payload button on the **Exploit** tab or type the payload yourself. Compare the
+vulnerable result with the secure result every time.
 
 ## Expected outcome
 
@@ -54,25 +54,34 @@ The vulnerable session spends far beyond the budget; the secure session stops at
 
 Exhaust the $5.00 monthly virtual budget with a single prompt, then submit the FLAG{...} the dashboard reveals.
 
-Submit it in the lab's **Validate** tab (Intermediate mode reveals hints one at a time if you
-get stuck). Flags are derived per installation with HMAC, so yours is unique to this
-deployment - do not expect to copy it from anywhere else.
+Submit it in the lab's **Validate** tab - press Enter or use the button. If you get stuck,
+the **Exploit** tab reveals hints one at a time (advanced labs have none). Flags are derived
+per installation with HMAC, so yours is unique to this deployment - do not expect to copy
+it from anywhere else.
 
-## Difficulty ladder
+## This lab's level: Intermediate
 
-- **Beginner** - guided steps, example payload buttons and this full walkthrough.
-- **Intermediate** - the walkthrough and the ready-made payloads disappear; you must phrase the
-  attack yourself. Hints are available one at a time on the Exploit tab. Challenge: Exhaust the $5.00 monthly virtual budget with a single prompt, then submit the FLAG{...} the dashboard reveals.
-- **Advanced** - no hints, and the example payload inputs are rejected by the server, so textbook
-  copy-paste attacks fail outright. No runaway-loop sample. Exhaust the $5.00 virtual budget with a single prompt of your own phrasing, capture the proof, then pass Fix-It: per-user quotas must be enforced before the model is ever called, or the replayed runaway prompt drains the budget again.
+- **Beginner** - guided steps on the Learn tab, one-click example payloads on the Exploit tab.
+- **Intermediate** - no guided steps and no ready-made payloads; hints unlock one at a time.
+- **Advanced** - no hints, no samples, and textbook payloads are rejected by the server, so the
+  attack has to be your own. Fix-It is required to count the lab as finished.
 
-## Fix it (Advanced mode)
+This lab is set to **Intermediate**.
+
+## Point value
+
+Every lab is worth **260 points**: +10 for running the vulnerable implementation,
++100 for capturing the flag and +150 for passing Fix-It. The same table drives the global
+leaderboard, and your score for this lab is shown in the right-hand rail.
+
+## Fix it
 
 **Enforce a token budget with cost alerts** - enforce_budget(spent, request_tokens, budget) returns {'allowed': bool, 'remaining': int, 'alerts': list}. All three arguments must be real ints (not bool); spent >= 0, request_tokens > 0, budget > 0, otherwise return {'allowed': False, 'remaining': 0, 'alerts': ['invalid']}. If spent + request_tokens > budget deny with alerts ['exceeded'] and remaining = max(budget - spent, 0). Otherwise allow, remaining = budget - spent - request_tokens, and alerts lists, in ascending order, each of '50%', '80%', '100%' that this request newly reaches or crosses (spent was below the threshold, spent + request is at or above it).
 
-Open the **Validate** tab in Advanced mode, edit `enforce_budget()` and submit. Your code
-runs in a resource-limited sandbox against deterministic attack tests: it must stop every
-attack and still behave correctly for benign input.
+Open the **Validate** tab, edit `enforce_budget()` and submit. Your code runs in a
+resource-limited sandbox against deterministic attack tests: it must stop every attack and
+still behave correctly for benign input. The per-check pass/fail list is the verdict; any
+LLM note under it is advisory only.
 
 ## Mitigations to apply
 
@@ -89,8 +98,8 @@ Put a hard ceiling on every loop, charge each call against a quota before it run
 - [ ] Reproduced it with at least two different payloads
 - [ ] Ran the secure implementation and identified the control that stopped the attack
 - [ ] Compared the vulnerable and secure source in the Code tab
-- [ ] Captured the flag and submitted it
-- [ ] Passed Fix-It validation with your own remediation
+- [ ] Captured the flag and submitted it (+100)
+- [ ] Passed Fix-It validation with your own remediation (+150)
 
 ---
 
