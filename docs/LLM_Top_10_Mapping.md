@@ -19,4 +19,4 @@ Related guidance: OWASP Top 10 for LLM Applications (2025), OWASP AI Testing Gui
 
 Note on numbering: modules keep the IDs this project was specified with. Each lab page shows the current OWASP 2025 category name, which differs for some entries (for example improper output handling is LLM05:2025, model DoS is covered by LLM10:2025 Unbounded Consumption, and overreliance is the 2023 LLM09 entry, now folded into LLM09:2025 Misinformation).
 
-All ten module IDs from the project plan are implemented. Vector and embedding weaknesses (LLM08:2025) and system prompt leakage (LLM07:2025) are touched by LLM03 and LLM01/LLM02 respectively but have no dedicated module.
+All twelve module IDs are implemented. The two labs that had no dedicated module — vector and embedding weaknesses (LLM08:2025) and system prompt leakage (LLM07:2025) — now have their own simulations as `llm12` and `llm11` respectively.

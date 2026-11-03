@@ -84,7 +84,7 @@ function Result({ title, tone, data, error }) {
 }
 
 export default function RunPanel({ module }) {
-  const { mode, mark } = useProgress()
+  const { mark } = useProgress()
   const [input, setInput] = useState('')
   const [variant, setVariant] = useState(module.variants[0] || null)
   const [res, setRes] = useState({ vulnerable: null, secure: null })
@@ -93,9 +93,10 @@ export default function RunPanel({ module }) {
 
   async function go(which) {
     setBusy(true)
-    // No engine is ever chosen in the browser: the server uses Groq or Gemini
-    // when a key is configured, otherwise its built-in simulator.
-    const payload = { input, mode, ...(variant ? { variant } : {}) }
+    // No engine and no mode is ever chosen in the browser: the server picks
+    // Groq or Gemini when a key is configured, otherwise its built-in
+    // simulator, and the lab's own difficulty decides the rules.
+    const payload = { input, ...(variant ? { variant } : {}) }
     try {
       const data = await api.run(module.id, which, payload)
       setRes((r) => ({ ...r, [which]: data })); setErr((e) => ({ ...e, [which]: null }))
@@ -105,7 +106,7 @@ export default function RunPanel({ module }) {
     } finally { setBusy(false) }
   }
 
-  const examples = mode === 'beginner' ? module.example_payloads : []
+  const examples = module.difficulty === 'Beginner' ? module.example_payloads : []
   return (
     <div className="space-y-4">
       {examples.length > 0 && (

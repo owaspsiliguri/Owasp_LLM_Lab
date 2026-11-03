@@ -25,7 +25,7 @@ export default function Dashboard() {
         <Stat label="Vulnerabilities explored" value={s.explored} />
         <Stat label="Flags captured" value={s.flags} />
         <Stat label="Fix-It challenges completed" value={s.fixes} />
-        <Stat label="Current difficulty" value={progress.mode[0].toUpperCase() + progress.mode.slice(1)} />
+        <Stat label="LLM engine online" value={health?.engines?.groq ? 'Groq' : health?.engines?.gemini ? 'Gemini' : health ? 'Simulator' : '—'} />
       </div>
       <div className="panel p-4">
         <div className="flex items-center justify-between text-sm"><span>Overall progress</span><span>{s.percent}%</span></div>

@@ -3,8 +3,7 @@ import { useAuth } from './useAuth.jsx'
 import { supabase } from '../services/supabase.js'
 
 const KEY = 'lll.progress.v1'
-const EMPTY = { mode: 'beginner', modules: {} }
-export const MODES = ['beginner', 'intermediate', 'advanced']
+const EMPTY = { modules: {} }
 
 // Progress is stored per identity: anonymous browsers use the classic key,
 // signed-in users get their own key so accounts never leak into each other.
@@ -13,7 +12,7 @@ const keyFor = (userId) => (userId ? `${KEY}.${userId}` : KEY)
 function loadKey(key) {
   try {
     const data = JSON.parse(localStorage.getItem(key))
-    if (data && MODES.includes(data.mode) && typeof data.modules === 'object') return data
+    if (data && typeof data.modules === 'object') return { modules: data.modules }
   } catch { /* corrupt or missing storage */ }
   return EMPTY
 }
@@ -60,8 +59,6 @@ export function ProgressProvider({ children }) {
     try { localStorage.setItem(keyFor(userId), JSON.stringify(state)) } catch { /* storage unavailable */ }
   }, [state, userId, authLoading])
 
-  const setMode = useCallback((mode) => MODES.includes(mode) && setState((s) => ({ ...s, mode })), [])
-
   const mark = useCallback((id, field) => {
     setState((s) => {
       const cur = s.modules[id] || {}
@@ -84,7 +81,7 @@ export function ProgressProvider({ children }) {
     }
   }, [userId])
 
-  const value = useMemo(() => ({ ...state, setMode, mark, reset }), [state, setMode, mark, reset])
+  const value = useMemo(() => ({ ...state, mark, reset }), [state, mark, reset])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

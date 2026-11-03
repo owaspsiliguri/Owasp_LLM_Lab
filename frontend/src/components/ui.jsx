@@ -1,4 +1,4 @@
-const TONES = { Beginner: 'text-safe-400 border-safe-400/40', Intermediate: 'text-warn-400 border-warn-400/40', Advanced: 'text-vuln-400 border-vuln-400/40', neutral: 'text-fog-300 border-ink-600' }
+const TONES = { Beginner: 'badge-safe', Intermediate: 'badge-warn', Advanced: 'badge-vuln', safe: 'badge-safe', neutral: 'badge-neutral' }
 
 export function Badge({ children, tone = 'neutral' }) {
   return <span className={`inline-block rounded border px-2 py-0.5 text-xs ${TONES[tone] || TONES.neutral}`}>{children}</span>

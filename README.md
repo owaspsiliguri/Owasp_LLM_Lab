@@ -37,17 +37,18 @@ Existing resources cover agentic AI, scanner benchmarking, CTF games and standar
 | ⚖️ **Independent LLM judge** | A second, separate model grades whether a real-model run actually leaked the secret and reviews failing Fix-It code — with transparent cross-provider fallback |
 | 🔐 **Accounts, admin, cloud progress** | Supabase Auth sign-up/sign-in, per-user cloud progress, session-gated lab API, and an admin console for `owaspsiliguri@gmail.com` (roster, completion, flags, forged-proof audit log) |
 | 🧪 **Fix It sandbox** | Submitted remediation code runs in a resource-limited subprocess against deterministic attack replays — including a canary-leak regression check |
-| 📖 **Guided end-to-end** | In-app walkthrough (Beginner), one-at-a-time hints (Intermediate), zero help (Advanced), plus a complete written guide rendered **inside the page** — no GitHub hand-offs |
+| 📖 **Guided end-to-end** | Complete walkthrough, vulnerability background, vulnerable + secure source and the Fix-It brief are all rendered **inside the lab page** — no GitHub hand-offs, no external docs |
 | 🛡️ **Hardened by default** | HMAC per-installation flags (never hardcoded), RLS on every Supabase table, server-side re-validation before any achievement, output redaction so a benign “hi” can never hand you a flag |
 
 ---
 
-## 📊 The ten labs
+## 📊 The twelve labs
 
 | ID | Lab | OWASP | Level |
 |----|-----|-------|-------|
 | llm01 | Prompt Injection | LLM01 | 🟢 Beginner |
 | llm02 | Sensitive Information Disclosure | LLM02 | 🟢 Beginner |
+| llm11 | System Prompt Leakage | LLM07 | 🟢 Beginner |
 | llm03 | Data & Knowledge Base Poisoning (ChromaDB) | LLM03 | 🟡 Intermediate |
 | llm04 | Model Denial of Service (virtual resources) | LLM04 | 🟡 Intermediate |
 | llm05 | Supply Chain (simulated registry) | LLM05 | 🟡 Intermediate |
@@ -56,16 +57,17 @@ Existing resources cover agentic AI, scanner benchmarking, CTF games and standar
 | llm07 | Excessive Agency (tool calls) | LLM07 | 🔴 Advanced |
 | llm08 | Overreliance (AI code review) | LLM08 | 🔴 Advanced |
 | llm09 | Hallucinations (conflicting RAG sources) | LLM09 | 🔴 Advanced |
+| llm12 | Vector & Embedding Weaknesses (multi-tenant RAG) | LLM08 | 🔴 Advanced |
 
-Every lab ships **vulnerable + secure implementations rendered from the real source that executes**, a flag capture, and (in Advanced mode) a Fix-It challenge. Written guides live in [`labs/guided/`](labs/guided/README.md) and are regenerated from module source by `scripts/gen_guides.py`. Full mapping: [docs/LLM_Top_10_Mapping.md](docs/LLM_Top_10_Mapping.md).
+Every lab ships **vulnerable + secure implementations rendered from the real source that executes**, a flag capture and a Fix-It challenge. Difficulty is a property of each lab, not a switch you flip — there are no mode buttons, because no lab is easier or harder on demand. Full mapping: [docs/LLM_Top_10_Mapping.md](docs/LLM_Top_10_Mapping.md).
 
-### Three ways to play
+### Difficulty is per lab, not a mode
 
-| Mode | What you get |
+| Level | What you get |
 |------|--------------|
-| **Beginner** | Guided steps, ready-made payload buttons, full in-page walkthrough |
-| **Intermediate** | No walkthrough, no example payloads — hints unlock one at a time; you phrase the attacks |
-| **Advanced** | No hints, no examples — ready-made payloads are **rejected by the server**. Capture the flag *and* pass Fix-It to finish. Insane mode. |
+| **Beginner** (llm01, llm02, llm11) | Walkthrough, ready-made payload buttons, hints on demand — everything you need to learn the pattern |
+| **Intermediate** (llm03, llm04, llm05, llm06, llm10) | Full walkthrough of the *mechanism*, one-at-a-time hints, **no ready-made exploit payloads** — you phrase the attack yourself |
+| **Advanced** (llm07, llm08, llm09, llm12) | No hints and no examples at all. Capture the flag **and** pass Fix-It to finish the lab |
 
 ---
 
@@ -97,7 +99,7 @@ Everything has a free tier and the guide assumes zero deployment experience:
 
 **[docs/Deployment_Guide.md](docs/Deployment_Guide.md)** — step by step:
 
-1. **Supabase** — create the project, run [`supabase/schema.sql`](supabase/schema.sql) (tables, row level security, admin trigger), copy 4 keys
+1. **Supabase** — create the project, run [`supabase/schema.sql`](supabase/schema.sql) (tables, row level security, the `owaspsiliguri@gmail.com` admin trigger), copy your keys
 2. **Render** — deploy the FastAPI backend (`backend/`, root directory + start command provided), set the Supabase env vars
 3. **Vercel** — deploy the React frontend (`frontend/` root directory), set `VITE_*` env vars
 4. **Connect** — set `CORS_ORIGINS` on Render to your Vercel URL

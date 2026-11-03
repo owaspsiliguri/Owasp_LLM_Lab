@@ -43,31 +43,28 @@ async def list_modules() -> list[dict[str, Any]]:
 
 
 @router.get("/modules/{module_id}")
-async def module_detail(module_id: str, mode: str = "beginner") -> dict[str, Any]:
-    detail = _get(module_id).detail()
-    if mode != "beginner":
-        # Harder modes never receive the walkthrough or the ready-made payloads.
-        detail.pop("guided_steps", None)
+async def module_detail(module_id: str) -> dict[str, Any]:
+    """Difficulty is a property of the lab itself, never a client choice."""
+    m = _get(module_id)
+    detail = m.detail()
+    level = m.difficulty.lower()
+    guided = level == "beginner"
+    if not guided:
+        # Harder labs keep their full walkthrough (the teaching content lives in
+        # the page), but never hand out a ready-made exploit payload.
         detail["example_payloads"] = []
+    detail["training_wheels"] = guided  # lets the UI know what to show
     return detail
 
 
 @router.get("/modules/{module_id}/hints/{n}")
-async def hint(module_id: str, n: int, mode: str = "beginner") -> dict[str, Any]:
-    if mode == "advanced":
-        raise HTTPException(403, "Advanced mode has no hints. You are on your own.")
+async def hint(module_id: str, n: int) -> dict[str, Any]:
     m = _get(module_id)
+    if m.difficulty.lower() == "advanced":
+        raise HTTPException(403, "Advanced labs have no hints. You are on your own.")
     if not 1 <= n <= len(m.hints):
         raise HTTPException(404, "No such hint")
     return {"n": n, "total": len(m.hints), "hint": m.hints[n - 1]}
-
-
-def _reject_training_wheels(m: VulnerabilityModule, req: RunRequest) -> None:
-    """Intermediate/Advanced must craft their own payloads: examples are off there."""
-    if req.mode == "beginner" or not m.example_payloads:
-        return
-    if req.input.strip() in {p["input"].strip() for p in m.example_payloads}:
-        raise HTTPException(400, f"Ready-made example payloads are disabled in {req.mode} mode - craft your own attack.")
 
 
 async def _judge_output(req: RunRequest, result: dict[str, Any]) -> None:
@@ -83,7 +80,7 @@ async def _judge_output(req: RunRequest, result: dict[str, Any]) -> None:
         result["judge"] = verdict
 
 
-async def _run(module_id: str, mode: str, req: RunRequest) -> dict[str, Any]:
+async def _run(module_id: str, vulnerable: bool, req: RunRequest) -> dict[str, Any]:
     m = _get(module_id)
     # There is no engine picker in the UI. `auto` (the only value the frontend
     # sends) resolves to Groq or Gemini when a key is configured and the module
@@ -92,9 +89,7 @@ async def _run(module_id: str, mode: str, req: RunRequest) -> dict[str, Any]:
     if req.engine in eng.real_llm_engines() and not getattr(m, "supports_real_llm", False):
         raise HTTPException(400, "This lab runs on the built-in simulator only; it does not use a real model.")
     req = req.model_copy(update={"engine": eng.resolve_engine(bool(getattr(m, "supports_real_llm", False)), req.engine)})
-    if mode == "vulnerable":
-        _reject_training_wheels(m, req)
-    fn = m.vulnerable_demo if mode == "vulnerable" else m.secure_demo
+    fn = m.vulnerable_demo if vulnerable else m.secure_demo
     try:
         result = await asyncio.to_thread(fn, req)
     except ModuleInputError as exc:
@@ -102,14 +97,14 @@ async def _run(module_id: str, mode: str, req: RunRequest) -> dict[str, Any]:
     except eng.EngineUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
     result = scrub(result)
-    if mode == "vulnerable":
+    if vulnerable:
         await _judge_output(req, result)
     return result
 
 
 @router.post("/modules/{module_id}/vulnerable")
 async def run_vulnerable(module_id: str, req: RunRequest, user: OptionalUser) -> dict[str, Any]:
-    result = await _run(module_id, "vulnerable", req)
+    result = await _run(module_id, True, req)
     if user:
         await store.upsert_progress(user["id"], module_id, explored=True)
     return result
@@ -117,22 +112,24 @@ async def run_vulnerable(module_id: str, req: RunRequest, user: OptionalUser) ->
 
 @router.post("/modules/{module_id}/secure")
 async def run_secure(module_id: str, req: RunRequest, user: OptionalUser) -> dict[str, Any]:
-    return await _run(module_id, "secure", req)
+    return await _run(module_id, False, req)
 
 
 @router.post("/modules/{module_id}/flag")
 async def submit_flag(module_id: str, req: FlagRequest, user: OptionalUser) -> dict[str, Any]:
-    ok = _get(module_id).validate_flag(req.flag)
+    m = _get(module_id)
+    ok = m.validate_flag(req.flag)
     if user:
         await store.record_attempt(user["id"], module_id, "flag", correct=ok, detail="flag submission")
         if ok:
             await store.upsert_progress(user["id"], module_id, flag=True)
     if ok:
-        message = "Correct. Now fix it in Advanced mode."
-    elif req.mode == "advanced":
-        message = "Denied."
+        message = (
+            "Correct. Now pass Fix-It to finish this lab."
+            if m.difficulty.lower() == "advanced" else "Correct."
+        )
     else:
-        message = "Not the right flag. Keep testing."
+        message = "Denied." if m.difficulty.lower() == "advanced" else "Not the right flag. Keep testing."
     return {"correct": ok, "message": message}
 
 

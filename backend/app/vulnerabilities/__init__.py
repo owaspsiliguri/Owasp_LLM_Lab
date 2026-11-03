@@ -11,11 +11,14 @@ from app.vulnerabilities.llm07_excessive_agency import ExcessiveAgency
 from app.vulnerabilities.llm08_overreliance import Overreliance
 from app.vulnerabilities.llm09_hallucinations import Hallucinations
 from app.vulnerabilities.llm10_improper_output import ImproperOutput
+from app.vulnerabilities.llm11_system_prompt_leakage import SystemPromptLeakage
+from app.vulnerabilities.llm12_vector_weaknesses import VectorWeaknesses
 
 # Register new modules here. Order defines the learning path.
 MODULES: list[VulnerabilityModule] = [
     PromptInjection(), InfoDisclosure(), ImproperOutput(), DataPoisoning(), ModelDoS(), UnboundedConsumption(), Hallucinations(),
     SupplyChain(), ExcessiveAgency(), Overreliance(),
+    SystemPromptLeakage(), VectorWeaknesses(),
 ]
 REGISTRY: dict[str, VulnerabilityModule] = {m.id: m for m in MODULES}
 
