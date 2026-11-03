@@ -1,0 +1,4 @@
+# SPA history fallback for hosts that read a _redirects file
+# (Render Static Sites, Netlify, Cloudflare Pages). Vercel uses vercel.json.
+# Every unknown path is served index.html so /labs/llm09 etc. survive a reload.
+/*    /index.html    200
