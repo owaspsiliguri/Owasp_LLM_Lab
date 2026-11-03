@@ -69,6 +69,15 @@ body {
   @apply w-full rounded border border-ink-600 bg-black/60 px-3 py-2 font-mono text-sm text-fog-100 placeholder:text-fog-500;
 }
 .input:focus { border-color: rgba(var(--neon-line), 0.6); box-shadow: 0 0 0 1px rgba(var(--neon-line), 0.35); }
+/* Chrome paints autofilled fields mustard; keep them looking like the theme. */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #e6edf3;
+  -webkit-box-shadow: 0 0 0 1000px #0a1013 inset;
+  caret-color: #e6edf3;
+  transition: background-color 9999s ease-in-out 0s;
+}
 
 /* --- badges ------------------------------------------------------------- */
 .badge-safe   { color: #4ade80; border-color: rgba(74, 222, 128, 0.4); }
