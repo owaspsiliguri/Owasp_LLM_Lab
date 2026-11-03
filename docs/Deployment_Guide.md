@@ -39,21 +39,26 @@ Student's browser ──▶ Vercel (website)
 ## Part A — Supabase: database and login (10 min)
 
 1. Go to **https://supabase.com/dashboard** and sign up (GitHub login is easiest).
-2. Click **New project**:
+2. If you see **"Your organizations"** with an empty box, click **New organization**:
+   - **Name:** `owasp-siliguri`
+   - **Type:** *Personal* (free)
+   - **Plan:** *Free*
+   - Click **Create organization**.
+3. Now click **New project** (top of the dashboard):
    - **Name:** `owasp-llm-lab`
    - **Database password:** click “Generate a password”, copy it somewhere safe. You do not
      need it for this guide, but never lose it.
    - **Region:** pick the region closest to your students.
    - Click **Create new project** and wait ~2 minutes.
-3. **Create the tables.** In the left menu open **SQL Editor** → **New query**. Delete any
+4. **Create the tables.** In the left menu open **SQL Editor** → **New query**. Delete any
    sample text, paste the *entire* contents of [`supabase/schema.sql`](../supabase/schema.sql),
    then click **Run** (or Ctrl+Enter). You should see **“Success. No rows returned”**.
    This creates `profiles`, `progress`, `attempts`, the security rules, and makes
    **owaspsiliguri@gmail.com** an administrator the moment that account signs up.
-4. **Let students sign up instantly.** Left menu → **Authentication** → **Sign In / Providers**
+5. **Let students sign up instantly.** Left menu → **Authentication** → **Sign In / Providers**
    (older dashboard: **Providers → Email**) → turn **Confirm email** OFF → **Save**.
    Keep it ON only if you want every student to click a confirmation link first.
-5. **Copy your keys.** Left menu → **Project Settings** (gear icon) → **API Keys** (plus the
+6. **Copy your keys.** Left menu → **Project Settings** (gear icon) → **API Keys** (plus the
    **API** / **JWT** section for the secret). Keep this table — you need it in Parts B and C:
 
    | Dashboard value | Where you paste it | Secrecy |
@@ -68,7 +73,7 @@ Student's browser ──▶ Vercel (website)
    > `SUPABASE_JWT_SECRET` empty — the backend automatically validates sessions against
    > your project URL instead. Either way works.
 
-6. **The admin account:** you will sign up with `owaspsiliguri@gmail.com` in Part E. The
+7. **The admin account:** you will sign up with `owaspsiliguri@gmail.com` in Part E. The
    schema automatically gives that address the **admin** role; every other account is a
    **student**. To promote someone else later, run this in the SQL Editor:
 
@@ -103,12 +108,19 @@ Student's browser ──▶ Vercel (website)
 
    | Key | Value |
    |---|---|
-   | `SUPABASE_URL` | your Project URL from Part A.5 |
-   | `SUPABASE_SERVICE_ROLE_KEY` | the secret/service key from Part A.5 |
+   | `SUPABASE_URL` | your Project URL from Part A.6 |
+   | `SUPABASE_SERVICE_ROLE_KEY` | the secret/service key from Part A.6 |
    | `SUPABASE_JWT_SECRET` | only if your project showed one; otherwise omit |
    | `LAB_SECRET` | any long random text, e.g. `my-lab-flags-never-change-9f3c…` (keeps flags stable across redeploys) |
    | `CORS_ORIGINS` | `https://YOUR-APP.vercel.app` — a placeholder for now; fix it exactly in Part D |
    | `RATE_LIMIT_PER_MINUTE` | `120` |
+   | `GROQ_API_KEY` | *optional* — the lab's real LLM, from https://console.groq.com/keys |
+   | `GEMINI_API_KEY` | *optional* — fallback real LLM, from https://aistudio.google.com/apikey |
+
+   The two model keys are optional but recommended: with a key the labs answer with a
+   real model **and** an independent LLM judge grades each run. Without them the built-in
+   simulator keeps every lab playable, so you can add the keys later without redeploying
+   code (just save the variable and let Render restart).
 
    Leaving all `SUPABASE_*` values out is also valid: the API then runs in **local mode**
    (labs open to everyone, progress only in the browser). With them set, the API **requires
@@ -120,7 +132,9 @@ Student's browser ──▶ Vercel (website)
    https://owasp-llm-lab-api.onrender.com/api/health
    ```
 
-   You should see JSON like `{"status":"ok","modules":10,…}`. That means the API is live.
+   You should see JSON like `{"status":"ok","modules":12,"chroma":…,"engines":{"groq":true,"gemini":true,"judge":"groq"}}`.
+   That means the API is live, all 12 labs loaded, and `engines` tells you which model
+   providers your keys unlocked.
 
    > Render free services **sleep** after ~15 minutes without traffic; the first request
    > after that takes ~50 seconds. This is normal.
@@ -138,10 +152,13 @@ Student's browser ──▶ Vercel (website)
 
    | Key | Value |
    |---|---|
-   | `VITE_SUPABASE_URL` | your Project URL (same as Part A.5) |
+   | `VITE_SUPABASE_URL` | your Project URL (same as Part A.6) |
    | `VITE_SUPABASE_ANON_KEY` | the **publishable/anon** key (browser-safe) |
    | `VITE_API_BASE` | `https://owasp-llm-lab-api.onrender.com/api` |
-   | `VITE_GUIDE_BASE` | `https://github.com/owaspsiliguri/Owasp_LLM_Lab/blob/main` (optional — where lab guides live) |
+
+   `VITE_API_BASE` must end in `/api` and have no trailing slash. Everything else the
+   student reads (guide, vulnerable code, Secure version, Fix-It) is rendered by the app
+   itself — there are no links out to GitHub in the lab pages.
 
 5. Click **Deploy**. After ~1 minute you get `https://YOUR-APP.vercel.app`.
    You should now see the lab's **Sign in** page (the app only asks for login when
@@ -173,10 +190,11 @@ Open your Vercel URL in a private/incognito window and walk this checklist:
 | 3 | Supabase → **Table Editor → profiles** | Your new account has a row (`role = student`) |
 | 4 | Open **Labs → Prompt Injection → Exploit**, type anything, **Run vulnerable** | The exploit runs (no 401); **Progress** page shows *Explored* |
 | 5 | Supabase → **Table Editor → progress** | A row with `explored = true` for your user |
-| 6 | Switch mode to **Intermediate**, submit a wrong flag, then the right one (hint: the *Learn* tab links the written guide) | *Failed* then *passed* row appears in **attempts** |
-| 7 | Sign out → sign in as **owaspsiliguri@gmail.com** (create the account if it does not exist) | Header shows an **ADMIN** badge and an **Admin** nav item |
+| 6 | On a **Beginner** lab submit a wrong flag, then the right one (the *Guide* tab walks you through it) | *Failed* then *passed* rows appear in **attempts**, badge turns to **Flag captured** |
+| 7 | Sign out → **Create an account** with **owaspsiliguri@gmail.com** (use a real password you keep) | Header shows an **ADMIN** badge and an **Admin** nav item |
+| 7b | **Leaderboard** page in a second account | Both students appear, ranked by score (flag 100 · fix-it 150 · explored 10) |
 | 8 | Open **Admin** | Your test student is listed with progress; the stats cards are non-zero |
-| 9 | Sign back in as the student, do a **Fix-It** in Advanced mode | `fixit = true` appears in `progress`, admin console updates after **Refresh** |
+| 9 | Sign back in as the student, pass the **Fix-It** on any lab | `fixit = true` appears in `progress`, admin console updates after **Refresh** |
 | 10 | Close the tab, come back, sign in again | All progress is still there (it lives in Supabase, not the browser) |
 
 If any row fails, jump to [Troubleshooting](#troubleshooting).
@@ -211,7 +229,7 @@ Render free services **sleep** when idle, and Supabase free projects can be **pa
 after long inactivity — open the dashboard or upgrade if that happens. Check each
 service's current pricing page before a big course.
 
-**Promote/demote admins:** see the SQL snippet in Part A.6.
+**Promote/demote admins:** see the SQL snippet in Part A.7.
 
 ---
 
@@ -223,8 +241,8 @@ service's current pricing page before a big course.
 | Error `Sign in to run labs on this deployment.` (401) | Frontend built **without** `VITE_SUPABASE_*`, or backend missing `SUPABASE_URL`/`SUPABASE_JWT_SECRET` | Set the matching variables on **both** Vercel and Render, then redeploy both |
 | Error `Cannot verify your session: the auth service is unreachable` (503) | Backend cannot reach Supabase | Check `SUPABASE_URL` in Render; check Supabase status page |
 | *Invalid login credentials* on correct password | Account created before you disabled email confirmation | Finish the confirmation email, or disable confirmation and retry |
-| No **Admin** nav item when signed in as owaspsiliguri@gmail.com | Profile row missing or role not promoted | Run `supabase/schema.sql` again (it is safe to re-run), or run the Part A.6 SQL, then sign out and back in |
-| `relation "public.profiles" does not exist` | Schema never ran | Part A.3 |
+| No **Admin** nav item when signed in as owaspsiliguri@gmail.com | Profile row missing or role not promoted | Run `supabase/schema.sql` again (it is safe to re-run), or run the Part A.7 SQL, then sign out and back in |
+| `relation "public.profiles" does not exist` | Schema never ran | Part A.4 |
 | Admin console shows *Could not load admin data* | Same as above, or the anon key lacks read rights | Re-run schema; confirm `VITE_SUPABASE_ANON_KEY` is the publishable/anon key |
 | Progress missing for a student who never signed up | They are in local mode / browsing anonymously | They must create an account (share `/signup`) |
 | Labs LLM03 / LLM09 return 503 or the service restarts | ChromaDB (RAG labs) is memory-hungry on the free instance | Set env `CHROMA_URL` to an external Chroma server, or upgrade the Render instance |

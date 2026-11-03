@@ -18,7 +18,7 @@ export default function Labs() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Labs</h1>
-          <p className="mt-1 text-sm text-fog-300">Ten real vulnerable labs mapped to the OWASP Top 10 for LLMs. Pick a level, then choose your learning mode in the header.</p>
+          <p className="mt-1 text-sm text-fog-300">Real vulnerable labs mapped to the OWASP Top 10 for LLMs. Every lab has its own fixed difficulty — Beginner labs come fully guided with example payloads, Intermediate labs keep the full walkthrough but hand over no ready-made exploit, and Advanced labs give no hints at all.</p>
         </div>
         <div role="group" aria-label="Filter by level" className="flex flex-wrap gap-1">
           {LEVELS.map((l) => (
@@ -33,7 +33,7 @@ export default function Labs() {
           return (
             <article key={m.id} className="panel flex flex-col gap-3 p-4">
               <div className="flex items-center gap-2"><Badge tone={m.difficulty}>{m.difficulty}</Badge><Badge>{m.owasp_id}</Badge>
-                {p.flag && <Badge tone="Beginner">Flag</Badge>}{p.fixit && <Badge tone="Advanced">Fixed</Badge>}</div>
+                {p.flag && <Badge tone="safe">Flag</Badge>}{p.fixit && <Badge tone="safe">Fixed</Badge>}</div>
               <h2 className="text-lg font-medium">{m.name}</h2>
               <p className="text-sm text-fog-300">{m.overview}</p>
               <dl className="text-sm text-fog-300">

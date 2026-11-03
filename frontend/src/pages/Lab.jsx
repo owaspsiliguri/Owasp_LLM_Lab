@@ -15,11 +15,11 @@ function List({ items, ordered }) {
   return <Tag className={`${ordered ? 'list-decimal' : 'list-disc'} space-y-1 pl-5 text-fog-300`}>{items.map((i) => <li key={i}>{i}</li>)}</Tag>
 }
 
-function Hints({ module, mode }) {
+function Hints({ module }) {
   const [hints, setHints] = useState([])
   const [error, setError] = useState(null)
   async function reveal() {
-    try { const h = await api.hint(module.id, hints.length + 1, mode); setHints((x) => [...x, h.hint]) } catch (e) { setError(e.message) }
+    try { const h = await api.hint(module.id, hints.length + 1); setHints((x) => [...x, h.hint]) } catch (e) { setError(e.message) }
   }
   return (
     <div className="panel p-3">
@@ -33,21 +33,21 @@ function Hints({ module, mode }) {
   )
 }
 
-function FlagForm({ module, mode }) {
+function FlagForm({ module }) {
   const { mark } = useProgress()
   const [flag, setFlag] = useState('')
   const [msg, setMsg] = useState(null)
   async function submit(e) {
     e.preventDefault()
     try {
-      const r = await api.flag(module.id, flag, mode)
+      const r = await api.flag(module.id, flag)
       setMsg({ ok: r.correct, text: r.message })
       if (r.correct) mark(module.id, 'flag')
     } catch (err) { setMsg({ ok: false, text: err.message }) }
   }
   return (
     <form onSubmit={submit} className="space-y-2">
-      <p className="text-fog-300">{mode === 'advanced' ? module.advanced_challenge : module.challenge}</p>
+      <p className="text-fog-300">{module.challenge}</p>
       <label className="block text-sm text-fog-300">Flag
         <input aria-label="Flag" className="input mt-1" value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="FLAG{...}" maxLength={200} />
       </label>
@@ -57,10 +57,26 @@ function FlagForm({ module, mode }) {
   )
 }
 
+// How the lab briefs the student, purely from its own fixed difficulty.
+function Rules({ difficulty }) {
+  const level = difficulty.toLowerCase()
+  const text = {
+    beginner: 'This is an entry-level lab: a guided walkthrough and one-click example payloads are on the Learn and Exploit tabs to teach the attack patterns.',
+    intermediate: 'This is an intermediate lab: no walkthrough and no ready-made payloads. Hints unlock one at a time; you must write your own attacks.',
+    advanced: 'This is an advanced lab: no hints, no examples, and the server rejects textbook payloads verbatim. Capture the flag and pass Fix-It to finish.',
+  }[level] || ''
+  return (
+    <section className="panel p-4">
+      <h2 className="font-medium">Expectations at this level</h2>
+      <p className="mt-2 text-sm text-fog-300">{text}</p>
+    </section>
+  )
+}
+
 // Right-hand rail: everything contextual about this lab. On small screens it
 // simply stacks below the content, so no space is wasted and nothing hides.
-function Sidebar({ module, mode, done }) {
-  const { modules: all, mode: progressMode } = useProgress()
+function Sidebar({ module, done }) {
+  const { modules: all } = useProgress()
   const steps = [
     ['Explored the vulnerability', done.explored],
     ['Captured the flag', done.flag],
@@ -72,7 +88,6 @@ function Sidebar({ module, mode, done }) {
         <h2 className="font-medium">In this lab</h2>
         <dl className="mt-2 space-y-1 text-sm text-fog-300">
           <div className="flex justify-between gap-2"><dt className="text-fog-500">Level</dt><dd>{module.difficulty}</dd></div>
-          <div className="flex justify-between gap-2"><dt className="text-fog-500">Mode</dt><dd className="capitalize">{progressMode}</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-fog-500">Time</dt><dd>{module.estimated_minutes} min</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-fog-500">OWASP</dt><dd>{module.owasp_id}</dd></div>
         </dl>
@@ -93,33 +108,27 @@ function Sidebar({ module, mode, done }) {
         </ul>
         <p className="mt-3 text-xs text-fog-500">{Object.keys(all).length ? 'Synced to your account when signed in.' : ''}</p>
       </section>
-      <section className="panel p-4">
-        <h2 className="font-medium">Mode rules</h2>
-        <p className="mt-2 text-sm text-fog-300">
-          {mode === 'beginner' && 'Guided steps and ready-made payloads are on. Follow the walkthrough, then read the guide.'}
-          {mode === 'intermediate' && 'No walkthrough, no example payloads. Hints unlock one at a time; you write the attacks.'}
-          {mode === 'advanced' && 'No hints, no examples — copy-paste attacks are rejected by the server. Capture the flag and pass Fix-It to finish.'}
-        </p>
-      </section>
+      <Rules difficulty={module.difficulty} />
     </aside>
   )
 }
 
 export default function Lab() {
   const { id } = useParams()
-  const { mode, modules } = useProgress()
+  const { modules } = useProgress()
   const [module, setModule] = useState(null)
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('Learn')
   useEffect(() => {
     let live = true
     setModule(null); setError(null)
-    api.module(id, mode).then((m) => live && setModule(m)).catch((e) => live && setError(e.message))
+    api.module(id).then((m) => live && setModule(m)).catch((e) => live && setError(e.message))
     return () => { live = false }
-  }, [id, mode])
+  }, [id])
   if (error || !module) return <Loading error={error} />
   const done = modules[id] || {}
   const guide = GUIDES[id]
+  const level = module.difficulty.toLowerCase()
 
   return (
     <div className="space-y-5 xl:grid xl:grid-cols-[minmax(0,1fr)_19rem] xl:items-start xl:gap-8">
@@ -127,7 +136,6 @@ export default function Lab() {
         <header>
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={module.difficulty}>Level: {module.difficulty}</Badge>
-            <Badge tone={mode === 'advanced' ? 'Advanced' : mode === 'intermediate' ? 'Intermediate' : 'Beginner'}>Mode: {mode}</Badge>
             <Badge>{module.owasp_id}</Badge><Badge>{module.estimated_minutes} min</Badge>
             {done.explored && <Badge>Explored</Badge>}{done.flag && <Badge>Flag captured</Badge>}{done.fixit && <Badge>Fixed</Badge>}
           </div>
@@ -144,12 +152,10 @@ export default function Lab() {
           <div className="space-y-5">
             <p className="max-w-prose text-fog-300">{module.overview}</p>
             <section><h2 className="mb-1 font-medium">Learning objectives</h2><List items={module.objectives} /></section>
-            {mode === 'beginner' && <>
+            {level === 'beginner' && <>
               <section><h2 className="mb-1 font-medium">Guided steps</h2><List ordered items={module.guided_steps || []} /></section>
               <section><h2 className="mb-1 font-medium">Expected outcome</h2><p className="text-fog-300">{module.expected_outcome}</p></section>
             </>}
-            {mode === 'intermediate' && <section className="panel border-warn-400/40 p-4"><h2 className="mb-1 font-medium text-warn-400">Challenge</h2><p className="text-fog-300">{module.challenge}</p></section>}
-            {mode === 'advanced' && <section className="panel border-vuln-400/40 p-4"><h2 className="mb-1 font-medium text-vuln-400">Advanced challenge — insane mode</h2><p className="text-fog-300">{module.advanced_challenge}</p></section>}
             <section className="panel p-4"><h2 className="mb-2 font-medium">Threat model ({module.owasp_id})</h2>
               <dl className="space-y-2 text-fog-300"><div><dt className="text-fog-500">Threat</dt><dd>{module.threat}</dd></div><div><dt className="text-fog-500">Security impact</dt><dd>{module.impact}</dd></div></dl>
             </section>
@@ -160,8 +166,8 @@ export default function Lab() {
         {tab === 'Exploit' && (
           <div className="space-y-4">
             <p className="text-sm text-fog-300">Everything runs inside this local lab. Do not use these payloads against systems you do not own.</p>
-            {mode === 'intermediate' && <Hints module={module} mode={mode} />}
-            {mode === 'advanced' && <p className="rounded border border-vuln-400/40 bg-vuln-900/40 px-3 py-2 text-sm text-vuln-400">Advanced: no hints here, and example payloads are rejected by the server. Craft your own.</p>}
+            {level !== 'advanced' && <Hints module={module} />}
+            {level === 'advanced' && <p className="rounded border border-vuln-400/40 bg-vuln-900/40 px-3 py-2 text-sm text-vuln-400">Advanced: no hints here, and example payloads crafted for other labs are rejected by the server. Write the attack yourself.</p>}
             <RunPanel module={module} />
           </div>
         )}
@@ -175,16 +181,16 @@ export default function Lab() {
 
         {tab === 'Validate' && (
           <div className="space-y-5">
-            <section className="panel p-4"><h2 className="mb-3 font-medium">Capture the flag</h2><FlagForm module={module} mode={mode} /></section>
-            {mode === 'advanced' && (
+            <section className="panel p-4"><h2 className="mb-3 font-medium">Capture the flag</h2><FlagForm module={module} /></section>
+            {level === 'advanced' && (
               <section className="panel border-vuln-400/40 p-4">
                 <h2 className="mb-1 font-medium">Fix-It — required to complete</h2>
-                <p className="mb-3 text-sm text-fog-300">In Advanced mode a lab is finished only when the flag is captured <em>and</em> your remediation passes the sandboxed attack replay.</p>
+                <p className="mb-3 text-sm text-fog-300">An advanced lab is finished only when the flag is captured <em>and</em> your remediation passes the sandboxed attack replay.</p>
                 <FixIt module={module} />
               </section>
             )}
-            {mode !== 'advanced' && (
-              <p className="text-sm text-fog-500">Switch to Advanced mode to attempt the Fix-It challenge — the hardest layer of this lab.</p>
+            {level === 'intermediate' && (
+              <p className="text-sm text-fog-500">Reaching an advanced lab unlocks the Fix-It challenge — the hardest layer of the platform.</p>
             )}
           </div>
         )}
@@ -196,7 +202,7 @@ export default function Lab() {
         )}
       </div>
 
-      <Sidebar module={module} mode={mode} done={done} />
+      <Sidebar module={module} done={done} />
     </div>
   )
 }

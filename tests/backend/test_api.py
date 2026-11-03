@@ -2,15 +2,17 @@ import pytest
 
 from app.core.secrets import flag_for
 
+ORDER = ["llm01", "llm02", "llm10", "llm03", "llm04", "llm06", "llm09", "llm05", "llm07", "llm08", "llm11", "llm12"]
+
 
 def test_health(client):
     r = client.get("/api/health")
-    assert r.status_code == 200 and r.json()["modules"] == 10
+    assert r.status_code == 200 and r.json()["modules"] == 12
 
 
 def test_list_and_detail(client):
     mods = client.get("/api/modules").json()
-    assert [m["id"] for m in mods] == ["llm01", "llm02", "llm10", "llm03", "llm04", "llm06", "llm09", "llm05", "llm07", "llm08"]
+    assert [m["id"] for m in mods] == ORDER
     for m in mods:
         d = client.get(f"/api/modules/{m['id']}").json()
         for key in ("vulnerable_code", "secure_code", "fixit", "objectives", "guided_steps", "remediation"):
@@ -28,10 +30,7 @@ def test_hints(client):
     assert client.get("/api/modules/llm01/hints/9").status_code == 404
 
 
-ALL = ["llm01", "llm02", "llm10", "llm03", "llm04", "llm06", "llm09", "llm05", "llm07", "llm08"]
-
-
-@pytest.mark.parametrize("mid", ALL)
+@pytest.mark.parametrize("mid", ORDER)
 def test_flag_roundtrip(client, mid):
     assert client.post(f"/api/modules/{mid}/flag", json={"flag": flag_for(mid)}).json()["correct"] is True
     assert client.post(f"/api/modules/{mid}/flag", json={"flag": "FLAG{wrong}"}).json()["correct"] is False
@@ -57,7 +56,7 @@ def test_unknown_variant_rejected(client):
     assert client.post("/api/modules/llm03/vulnerable", json={"input": "x", "variant": "BAD VARIANT!"}).status_code == 422
 
 
-@pytest.mark.parametrize("mid", ["llm03", "llm04", "llm05", "llm06", "llm07", "llm08", "llm09"])
+@pytest.mark.parametrize("mid", ["llm03", "llm04", "llm05", "llm06", "llm07", "llm08", "llm09", "llm11", "llm12"])
 def test_simulated_modules_reject_real_engines(client, mid):
     r = client.post(f"/api/modules/{mid}/vulnerable", json={"input": "1", "engine": "groq"})
     assert r.status_code == 400

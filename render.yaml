@@ -14,6 +14,9 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
+      # chromadb==0.5.23 has no wheels for 3.13+, so pin the interpreter.
+      - key: PYTHON_VERSION
+        value: 3.12.7
       # Frontend origin allowed to call this API (your Vercel URL, no trailing slash).
       - key: CORS_ORIGINS
         value: https://YOUR-APP.vercel.app
@@ -30,9 +33,10 @@ services:
         sync: false
       - key: SUPABASE_JWT_SECRET
         sync: false
-      # Optional real-LLM engines and judge. Leave empty for the deterministic
-      # engine; add a key to unlock Groq/Gemini in the engine dropdown and the
-      # independent LLM judge (console.groq.com/keys or aistudio.google.com/apikey).
+      # Real LLM providers (Groq and Gemini are the only ones). There is no
+      # engine picker in the UI: the server uses whichever key is present and
+      # falls back to the built-in simulator when neither is set.
+      # Keys: https://console.groq.com/keys  |  https://aistudio.google.com/apikey
       - key: GROQ_API_KEY
         sync: false
       - key: GEMINI_API_KEY

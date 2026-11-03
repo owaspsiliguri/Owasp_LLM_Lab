@@ -19,7 +19,7 @@ export default function Leaderboard() {
 
   if (!data.enabled) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
+      <div className="space-y-4">
         <h1 className="text-2xl font-semibold">Global leaderboard</h1>
         <div className="panel p-5">
           <p className="text-fog-300">The global leaderboard appears when this deployment is connected to Supabase — scores are then computed server-side from every student's progress and attempt history.</p>

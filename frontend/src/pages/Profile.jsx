@@ -50,7 +50,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="space-y-6">
       <header className="panel flex flex-wrap items-center gap-4 p-5">
         <span aria-hidden className="grid h-16 w-16 place-items-center rounded-full border-2 border-steel-400/60 text-xl font-semibold text-steel-400">{initials(displayName)}</span>
         <div className="min-w-0">
@@ -72,6 +72,7 @@ export default function Profile() {
         <Stat label="Overall progress" value={`${s.percent}%`} />
       </section>
 
+      <div className="grid items-start gap-5 lg:grid-cols-2">
       <section className="panel p-5">
         <h2 className="font-medium">Display name</h2>
         <p className="mt-1 text-sm text-fog-500">Shown on the leaderboard and in the admin roster.</p>
@@ -98,6 +99,7 @@ export default function Profile() {
           {pwMsg && <p role="status" className={`mt-2 text-sm ${pwMsg.ok ? 'text-safe-400' : 'text-vuln-400'}`}>{pwMsg.text}</p>}
         </section>
       )}
+      </div>
     </div>
   )
 }

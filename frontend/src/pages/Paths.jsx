@@ -36,7 +36,7 @@ const PATHS = [
   },
   {
     title: 'Full track',
-    desc: 'All ten modules in recommended order, each ending with hands-on remediation — the complete path from curious to dangerous.',
+    desc: 'All twelve modules in recommended order, each ending with hands-on remediation — the complete path from curious to dangerous.',
     learns: ['Every OWASP Top 10 for LLM Applications risk, exploited and fixed', 'A portfolio of validated remediations you wrote yourself'],
     ids: ['llm01', 'llm02', 'llm10', 'llm03', 'llm05', 'llm04', 'llm06', 'llm07', 'llm09', 'llm08'],
   },

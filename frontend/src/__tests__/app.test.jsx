@@ -14,20 +14,21 @@ const MODULE = {
   fixit: { title: 'Fix title', brief: 'Brief', starter_code: 'def build_messages(a, b):\n    return []', function: 'build_messages' },
 }
 
+// An Advanced lab: no walkthrough, no example payloads.
+const ADVANCED = {
+  ...MODULE, id: 'llm07', name: 'Excessive Agency', owasp_id: 'LLM07', difficulty: 'Advanced',
+  example_payloads: [], challenge: 'Escalate and submit the flag',
+}
+
 function mockApi(overrides = {}) {
   globalThis.fetch = vi.fn(async (url, opts) => {
     const full = String(url)
     const path = full.split('?')[0]
-    const mode = new URL(full, 'http://lab.test').searchParams.get('mode') || 'beginner'
     const body = (data, status = 200) => ({ ok: status < 400, status, json: async () => data })
     if (overrides[path]) return body(...[].concat(overrides[path]))
     if (path === '/api/modules') return body([MODULE])
-    if (path === '/api/modules/llm01') {
-      if (mode === 'beginner') return body(MODULE)
-      const rest = { ...MODULE }
-      delete rest.guided_steps // hard modes never receive the walkthrough
-      return body({ ...rest, example_payloads: [] })
-    }
+    if (path === '/api/modules/llm01') return body(MODULE)
+    if (path === '/api/modules/llm07') return body(ADVANCED)
     if (path === '/api/health') return body({ status: 'ok', modules: 1, chroma: null,
       engines: { groq: false, gemini: false, judge: 'off' } })
     if (path === '/api/leaderboard') return body({ enabled: true, formula: 'flag 100 · fix-it 150 · explored 10',
@@ -48,7 +49,7 @@ describe('navigation and dashboard', () => {
 
   it('shows all main navigation entries', async () => {
     renderAt('/')
-    for (const name of ['Dashboard', 'Labs', 'Learning Paths', 'Progress', 'Leaderboard', 'Documentation', 'About', 'Contribute']) {
+    for (const name of ['Dashboard', 'Labs', 'Learning Paths', 'Progress', 'Leaderboard', 'About', 'Contribute']) {
       expect(screen.getByRole('link', { name })).toBeInTheDocument()
     }
   })
@@ -89,10 +90,10 @@ describe('navigation and dashboard', () => {
   })
 })
 
-describe('lab workflow and modes', () => {
+describe('lab workflow', () => {
   beforeEach(() => mockApi())
 
-  it('beginner mode shows guided steps and example payloads, runs both implementations and tracks progress', async () => {
+  it('beginner lab shows guided steps and example payloads, runs both implementations and tracks progress', async () => {
     const user = userEvent.setup()
     renderAt('/labs/llm01')
     expect(await screen.findByText('Step one')).toBeInTheDocument()
@@ -107,14 +108,12 @@ describe('lab workflow and modes', () => {
     expect(JSON.parse(localStorage.getItem('lll.progress.v1')).modules.llm01.explored).toBe(true)
   })
 
-  it('intermediate mode hides guided steps, reveals hints one at a time and validates flags', async () => {
+  it('a beginner lab has no mode switch and offers hints on the Exploit tab', async () => {
     const user = userEvent.setup()
     renderAt('/labs/llm01')
     await screen.findByText('Step one')
-    await user.selectOptions(screen.getByLabelText('Learning mode'), 'intermediate')
-    expect(screen.queryByText('Step one')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Learning mode')).not.toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: 'Exploit' }))
-    expect(screen.queryByRole('button', { name: 'Override' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Reveal hint 1 of 2/ }))
     expect(await screen.findByText('First hint')).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: 'Validate' }))
@@ -127,20 +126,20 @@ describe('lab workflow and modes', () => {
     await waitFor(() => expect(JSON.parse(localStorage.getItem('lll.progress.v1')).modules.llm01.flag).toBe(true))
   })
 
-  it('advanced mode offers Fix It and records a passing validation', async () => {
+  it('an advanced lab hides the walkthrough, keeps the level badge and requires Fix-It', async () => {
     const user = userEvent.setup()
-    renderAt('/labs/llm01')
-    await screen.findByText('Step one')
-    await user.selectOptions(screen.getByLabelText('Learning mode'), 'advanced')
-    // the header shows the lab's fixed level as a toned badge plus the selected mode
-    expect(await screen.findByText('Mode: advanced')).toBeInTheDocument()
-    expect(screen.getByText('Level: Beginner')).toBeInTheDocument()
+    renderAt('/labs/llm07')
+    await screen.findByText('Excessive Agency')
+    expect(screen.getByText('Level: Advanced')).toBeInTheDocument()
+    expect(screen.queryByText('Step one')).not.toBeInTheDocument() // no walkthrough on hard labs
+    expect(screen.queryByLabelText('Learning mode')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Exploit' }))
+    expect(screen.queryByRole('button', { name: 'Override' })).not.toBeInTheDocument() // no example payloads
     await user.click(screen.getByRole('tab', { name: 'Validate' }))
-    expect(screen.getByLabelText('Fix-It code editor')).toHaveValue(MODULE.fixit.starter_code)
-    expect(screen.getByRole('button', { name: 'Submit flag' })).toBeInTheDocument() // flag stays available
+    expect(screen.getByLabelText('Fix-It code editor')).toHaveValue(ADVANCED.fixit.starter_code)
     await user.click(screen.getByRole('button', { name: 'Validate fix' }))
     expect(await screen.findByText(/Fix validated/)).toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('lll.progress.v1')).modules.llm01.fixit).toBe(true)
+    expect(JSON.parse(localStorage.getItem('lll.progress.v1')).modules.llm07.fixit).toBe(true)
   })
 
   it('renders the complete written guide inside the page (no external links)', async () => {
@@ -284,13 +283,12 @@ describe('profile', () => {
 })
 
 describe('progress persistence', () => {
-  it('restores mode and progress from localStorage and can reset', async () => {
+  it('restores progress from localStorage and can reset', async () => {
     mockApi()
-    localStorage.setItem('lll.progress.v1', JSON.stringify({ mode: 'advanced', modules: { llm01: { explored: true, flag: true, fixit: true } } }))
+    localStorage.setItem('lll.progress.v1', JSON.stringify({ modules: { llm01: { explored: true, flag: true, fixit: true } } }))
     const user = userEvent.setup()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderAt('/progress')
-    expect(screen.getByLabelText('Learning mode')).toHaveValue('advanced')
     expect(await screen.findByText('100% complete')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Reset progress' }))
     expect(await screen.findByText('0% complete')).toBeInTheDocument()
@@ -300,6 +298,6 @@ describe('progress persistence', () => {
     mockApi()
     localStorage.setItem('lll.progress.v1', '{not json')
     renderAt('/progress')
-    expect(screen.getByLabelText('Learning mode')).toHaveValue('beginner')
+    expect(await screen.findByText('0% complete')).toBeInTheDocument()
   })
 })
