@@ -72,8 +72,13 @@ export default function Home() {
         <div className="relative grid gap-10 px-6 py-10 sm:px-10 sm:py-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-14 lg:px-12">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200">
-              <Icon name="shield" size={13} />
-              OWASP Top 10 for LLM Applications · 2025
+              <span className="font-mono text-xs font-medium">OWASP</span>
+              <span className="text-xs font-medium text-slate-500">·</span>
+              <span className="font-mono text-xs font-medium">LLM</span>
+              <span className="text-xs font-medium text-slate-500">·</span>
+              <span className="font-mono text-xs font-medium text-brand-400">Top 10</span>
+              <span className="text-xs font-medium text-slate-500">·</span>
+              <span className="font-mono text-xs font-medium">2025</span>
             </span>
             <h1 className="mt-5 max-w-2xl text-[clamp(2rem,5vw,3.4rem)] font-semibold leading-[1.08] tracking-tight">
               Learn LLM security by breaking real applications.

@@ -41,12 +41,12 @@ function initials(name) {
 function Logo({ compact = false }) {
   return (
     <span className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-600 text-ink-950 shadow-sm">
-        <Icon name="shield" size={19} />
+      <span className="logo grid h-9 w-9 place-items-center rounded-lg border border-brand-500/40 bg-brand-500/10 text-[13px] font-bold">
+        <span className="neon">&gt;_</span>
       </span>
       <span className="leading-tight">
-        <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">OWASP</span>
-        <span className="block text-sm font-semibold text-white">LLM Lab</span>
+        <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-fog-500">OWASP</span>
+        <span className="block font-mono text-sm font-semibold text-fog-100">LLM Lab</span>
       </span>
       {!compact && <span className="sr-only">OWASP LLM Lab home</span>}
     </span>
