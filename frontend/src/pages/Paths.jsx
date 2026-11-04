@@ -65,7 +65,7 @@ export default function Paths() {
                             to={`/labs/${module.id}?path=${path.slug}`}
                             className="group flex items-center gap-3 py-2.5 text-sm"
                           >
-                            <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-medium ${completeLab ? 'bg-emerald-600 text-white' : 'border border-line text-slate-400'}`}>
+                            <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-medium ${completeLab ? 'bg-emerald-600 text-ink-950' : 'border border-line text-slate-400'}`}>
                               {completeLab ? <Icon name="check" size={11} strokeWidth={3} /> : index + 1}
                             </span>
                             <span className="min-w-0 flex-1">

@@ -59,7 +59,7 @@ export default function Signup() {
   const footer = (
     <>
       Already registered?{' '}
-      <Link className="font-medium text-brand-700 underline decoration-brand-300 underline-offset-2" to="/login" state={{ from: redirectTo }}>
+      <Link className="font-medium text-brand-700 underline decoration-brand-500/50 underline-offset-2" to="/login" state={{ from: redirectTo }}>
         Sign in
       </Link>
     </>

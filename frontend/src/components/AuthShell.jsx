@@ -10,7 +10,7 @@ const POINTS = [
 export default function AuthShell({ title, subtitle, children, footer }) {
   return (
     <div className="min-h-screen bg-mist lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-      <aside className="relative hidden overflow-hidden bg-navy-900 px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-16">
+      <aside className="scanlines relative hidden overflow-hidden bg-ink-950 px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-16">
         <div
           aria-hidden
           className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/10"
@@ -18,10 +18,12 @@ export default function AuthShell({ title, subtitle, children, footer }) {
         <div aria-hidden className="pointer-events-none absolute -right-10 top-10 h-72 w-72 rounded-full border border-white/5" />
 
         <Link to="/" className="relative inline-flex w-fit items-center gap-2.5 rounded focus-visible:outline-white">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-600"><Icon name="shield" size={19} /></span>
+          <span className="logo grid h-9 w-9 place-items-center rounded-lg border border-brand-500/40 bg-brand-500/10 text-[13px] font-bold">
+            <span className="neon">&gt;_</span>
+          </span>
           <span className="leading-tight">
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">OWASP</span>
-            <span className="block text-sm font-semibold">LLM Lab</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-fog-500">OWASP</span>
+            <span className="block font-mono text-sm font-semibold text-fog-100">LLM Lab</span>
           </span>
         </Link>
 
@@ -57,8 +59,10 @@ export default function AuthShell({ title, subtitle, children, footer }) {
       <main className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-8">
         <div className="w-full max-w-[26rem]">
           <Link to="/" className="mb-6 inline-flex items-center gap-2.5 rounded lg:hidden">
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-navy-900 text-white"><Icon name="shield" size={18} /></span>
-            <span className="text-sm font-semibold text-ink">OWASP LLM Lab</span>
+            <span className="logo grid h-9 w-9 place-items-center rounded-lg border border-brand-500/40 bg-brand-500/10 text-[13px] font-bold">
+              <span className="neon">&gt;_</span>
+            </span>
+            <span className="font-mono text-sm font-semibold text-ink">OWASP LLM Lab</span>
           </Link>
 
           <div className="card p-6 sm:p-8">

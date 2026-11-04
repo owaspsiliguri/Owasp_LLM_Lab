@@ -107,7 +107,7 @@ export default function Admin() {
         <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <p className="font-medium">Could not load admin data</p>
           <p className="mt-1">{state.error}</p>
-          <p className="mt-1 text-xs">If this is a fresh project, run <code className="rounded bg-white px-1 font-mono">supabase/schema.sql</code> in the Supabase SQL editor.</p>
+          <p className="mt-1 text-xs">If this is a fresh project, run <code className="rounded bg-ink-900 px-1 font-mono">supabase/schema.sql</code> in the Supabase SQL editor.</p>
         </div>
       )}
 

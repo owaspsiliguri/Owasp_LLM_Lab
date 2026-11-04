@@ -6,9 +6,9 @@ import Icon from '../components/Icons.jsx'
 function PodiumCard({ entry, me }) {
   const highlight = me?.rank === entry.rank
   return (
-    <article className={`card p-5 ${highlight ? 'border-brand-300 ring-2 ring-brand-100' : ''}`}>
+    <article className={`card p-5 ${highlight ? 'border-brand-500/40 ring-2 ring-brand-500/20' : ''}`}>
       <div className="flex items-center gap-3">
-        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${entry.rank === 1 ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${entry.rank === 1 ? 'bg-brand-600 text-ink-950' : 'bg-slate-100 text-slate-600'}`}>
           {entry.rank}
         </span>
         <div className="min-w-0">
@@ -68,7 +68,7 @@ export default function Leaderboard() {
       />
 
       {data.me && data.me.rank > 50 && (
-        <div className="card flex flex-wrap items-center gap-3 border-brand-200 bg-brand-50/50 p-4">
+        <div className="card flex flex-wrap items-center gap-3 border-brand-500/30 bg-brand-50/50 p-4">
           <Icon name="trophy" size={18} className="text-brand-700" />
           <p className="text-sm text-slate-700">
             Your rank is <span className="font-semibold text-ink">#{data.me.rank}</span> with {data.me.score} points.
@@ -129,7 +129,7 @@ export default function Leaderboard() {
                 {rest.map((entry) => {
                   const me = data.me?.rank === entry.rank
                   return (
-                    <li key={entry.rank} className={`card flex items-center gap-3 p-4 ${me ? 'border-brand-200 bg-brand-50/50' : ''}`}>
+                    <li key={entry.rank} className={`card flex items-center gap-3 p-4 ${me ? 'border-brand-500/30 bg-brand-50/50' : ''}`}>
                       <span className="w-7 shrink-0 text-sm font-medium text-slate-400">{entry.rank}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-ink">{entry.display}{me && <span className="ml-1.5 text-xs text-brand-700">(you)</span>}</p>

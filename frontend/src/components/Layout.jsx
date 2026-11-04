@@ -41,7 +41,7 @@ function initials(name) {
 function Logo({ compact = false }) {
   return (
     <span className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-600 text-white shadow-sm">
+      <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-600 text-ink-950 shadow-sm">
         <Icon name="shield" size={19} />
       </span>
       <span className="leading-tight">
@@ -97,7 +97,7 @@ function Breadcrumbs() {
 function SidebarContent({ nav, authed, admin, profile, session, onNavigate, signOut }) {
   const name = profile?.full_name || session?.user?.email || ''
   return (
-    <div className="flex h-full flex-col bg-navy-900">
+    <div className="flex h-full flex-col bg-ink-950">
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5">
         <Link to="/" onClick={onNavigate} className="rounded focus-visible:outline-white"><Logo /></Link>
         {onNavigate && (
@@ -150,7 +150,7 @@ function SidebarContent({ nav, authed, admin, profile, session, onNavigate, sign
         ) : isAuthEnabled() ? (
           <div className="space-y-2 px-1 pb-1">
             <Link to="/signup" onClick={onNavigate} className="btn btn-primary w-full">Create account</Link>
-            <Link to="/login" onClick={onNavigate} className="btn w-full border-white/15 bg-white/5 text-white hover:bg-white/10">Sign in</Link>
+            <Link to="/login" onClick={onNavigate} className="btn w-full border-ink-700 bg-ink-900 text-fog-100 hover:bg-ink-800">Sign in</Link>
           </div>
         ) : (
           <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
@@ -237,12 +237,12 @@ export default function Layout() {
 
   return (
     <>
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[90] focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:shadow-card">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[90] focus:rounded-lg focus:bg-ink-950 focus:px-3 focus:py-2 focus:text-sm focus:text-ink focus:shadow-card">
         Skip to content
       </a>
 
       <div className="min-h-screen lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
-        <aside className="sticky top-0 hidden h-screen lg:block">
+        <aside className="sticky top-0 hidden h-screen border-r border-ink-700 lg:block">
           <SidebarContent
             nav={nav} authed={authed} admin={admin} profile={profile} session={session}
             signOut={signOut}
@@ -250,7 +250,7 @@ export default function Layout() {
         </aside>
 
         <div className="flex min-h-screen min-w-0 flex-col">
-          <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
+          <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-950/95 backdrop-blur">
             <div className="flex h-16 items-center gap-2 px-4 sm:gap-4 sm:px-6 lg:px-8">
               <button
                 ref={triggerRef}
@@ -264,8 +264,9 @@ export default function Layout() {
                 <Icon name={open ? 'close' : 'menu'} size={22} />
               </button>
 
-              <Link to="/" className="flex items-center gap-2 lg:hidden" aria-label="OWASP LLM Lab home">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-navy-900 text-white"><Icon name="shield" size={16} /></span>
+              <Link to="/" className="flex items-center gap-1.5 lg:hidden" aria-label="OWASP LLM Lab home">
+                <span className="logo neon text-lg font-bold">&gt;_</span>
+                <span className="font-mono text-sm font-semibold text-ink">LLM Lab</span>
               </Link>
 
               <Breadcrumbs />
@@ -274,7 +275,7 @@ export default function Layout() {
                 {authed ? (
                   <>
                     <Link to="/profile" className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-slate-100" title={session.user.email}>
-                      <span className="grid h-8 w-8 place-items-center rounded-full bg-navy-900 text-xs font-semibold text-white">{initials(name)}</span>
+                      <span className="grid h-8 w-8 place-items-center rounded-full border border-ink-600 bg-ink-800 text-xs font-semibold text-brand-400">{initials(name)}</span>
                       <span className="hidden max-w-[10rem] truncate text-sm text-slate-600 md:inline">{name}</span>
                     </Link>
                     <button type="button" onClick={signOut} className="btn btn-sm btn-ghost" aria-label="Sign out">
@@ -312,7 +313,7 @@ export default function Layout() {
             type="button"
             tabIndex={-1}
             aria-label="Close navigation"
-            className="absolute inset-0 h-full w-full cursor-default bg-slate-950/55"
+            className="absolute inset-0 h-full w-full cursor-default bg-black/70"
             onClick={close}
           />
           <div

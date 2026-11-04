@@ -51,7 +51,7 @@ export default function Login() {
   const footer = (
     <>
       New here?{' '}
-      <Link className="font-medium text-brand-700 underline decoration-brand-300 underline-offset-2" to="/signup" state={{ from: redirectTo }}>
+      <Link className="font-medium text-brand-700 underline decoration-brand-500/50 underline-offset-2" to="/signup" state={{ from: redirectTo }}>
         Create an account
       </Link>
     </>

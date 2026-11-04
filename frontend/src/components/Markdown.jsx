@@ -11,13 +11,13 @@ function inline(text, keyBase = 'i') {
     const token = match[0]
     const key = `${keyBase}-${index++}`
     if (token.startsWith('**')) parts.push(<strong key={key} className="font-semibold text-ink">{token.slice(2, -2)}</strong>)
-    else if (token.startsWith('`')) parts.push(<code key={key} className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.86em] text-navy-800">{token.slice(1, -1)}</code>)
+    else if (token.startsWith('`')) parts.push(<code key={key} className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.86em] text-brand-400">{token.slice(1, -1)}</code>)
     else if (token.startsWith('[')) {
       const link = /\[([^\]]+)\]\(([^)]+)\)/.exec(token)
       const href = link[2]
       const external = /^https?:\/\//.test(href)
       parts.push(
-        <a key={key} href={href} className="text-brand-700 underline decoration-brand-300 underline-offset-2" target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>
+        <a key={key} href={href} className="text-brand-700 underline decoration-brand-500/50 underline-offset-2" target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>
           {link[1]}
         </a>,
       )
@@ -63,7 +63,7 @@ export default function Markdown({ source }) {
       while (index < lines.length && !lines[index].startsWith('```')) { code.push(lines[index]); index += 1 }
       index += 1
       blocks.push(
-        <pre key={index} className="my-4 overflow-x-auto rounded-xl border border-navy-700 bg-navy-950 p-4 font-mono text-[13px] leading-relaxed text-slate-200">
+        <pre key={index} className="my-4 overflow-x-auto rounded-xl border border-ink-700 bg-ink-950 p-4 font-mono text-[13px] leading-relaxed text-slate-200">
           <code>{code.join('\n')}</code>
         </pre>,
       )
