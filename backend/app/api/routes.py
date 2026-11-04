@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
+from collections import Counter, defaultdict, deque
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 
+from app.config import get_settings
 from app.core.auth import OptionalUser
 from app.core.redaction import scrub
 from app.models.schemas import FixRequest, FlagRequest, RunRequest
@@ -17,6 +21,25 @@ from app.vulnerabilities.base import ModuleInputError, VulnerabilityModule
 
 router = APIRouter()
 log = logging.getLogger("lab.api")
+_flag_window: dict[str, deque[float]] = defaultdict(deque)
+
+
+def _flag_key(request: Request, user: dict[str, str] | None) -> str:
+    if user:
+        return f"user:{user['id']}"
+    return f"ip:{request.client.host if request.client else 'unknown'}"
+
+
+def _flag_limited(key: str) -> bool:
+    """Per-identity sliding window so repeated guesses cannot brute-force a flag."""
+    now = time.monotonic()
+    window = _flag_window[key]
+    while window and now - window[0] > 60:
+        window.popleft()
+    if len(window) >= get_settings().flag_rate_limit_per_minute:
+        return True
+    window.append(now)
+    return False
 
 
 def _failure_brief(result: dict[str, Any]) -> str:
@@ -57,6 +80,22 @@ async def list_modules() -> list[dict[str, Any]]:
     return [m.summary() for m in MODULES]
 
 
+@router.get("/stats")
+async def platform_statistics() -> dict[str, Any]:
+    """Real counts only: module metadata always, learner totals when Supabase is connected."""
+    difficulty = Counter(m.difficulty.lower() for m in MODULES)
+    totals = await store.platform_stats()
+    return {
+        "labs": len(MODULES),
+        "difficulty": {level: difficulty.get(level.lower(), 0) for level in ("Beginner", "Intermediate", "Advanced", "Expert")},
+        "owasp_categories": len({m.category.split(":")[0] for m in MODULES}),
+        "minutes": sum(m.estimated_minutes for m in MODULES),
+        "points_available": len(MODULES) * 260,
+        "learners": totals["learners"] if totals else None,
+        "completions": totals["completions"] if totals else None,
+    }
+
+
 @router.get("/modules/{module_id}")
 async def module_detail(module_id: str) -> dict[str, Any]:
     """Difficulty is a property of the lab itself, never a client choice."""
@@ -75,8 +114,8 @@ async def module_detail(module_id: str) -> dict[str, Any]:
 @router.get("/modules/{module_id}/hints/{n}")
 async def hint(module_id: str, n: int) -> dict[str, Any]:
     m = _get(module_id)
-    if m.difficulty.lower() == "advanced":
-        raise HTTPException(403, "Advanced labs have no hints. You are on your own.")
+    if not m.hints_available:
+        raise HTTPException(403, "This lab has no hints. You are on your own.")
     if not 1 <= n <= len(m.hints):
         raise HTTPException(404, "No such hint")
     return {"n": n, "total": len(m.hints), "hint": m.hints[n - 1]}
@@ -131,21 +170,31 @@ async def run_secure(module_id: str, req: RunRequest, user: OptionalUser) -> dic
 
 
 @router.post("/modules/{module_id}/flag")
-async def submit_flag(module_id: str, req: FlagRequest, user: OptionalUser) -> dict[str, Any]:
+async def submit_flag(module_id: str, req: FlagRequest, user: OptionalUser, request: Request) -> dict[str, Any]:
     m = _get(module_id)
+    level = m.difficulty.lower()
+    if _flag_limited(_flag_key(request, user)):
+        return JSONResponse(
+            status_code=429,
+            content={"correct": False, "status": "rate_limited",
+                     "message": "Too many flag attempts. Wait a minute before trying again."},
+        )
+
     ok = m.validate_flag(req.flag)
-    if user:
+    already = bool(user and ok and await store.has_flag(user["id"], module_id))
+    if user and not already:
         await store.record_attempt(user["id"], module_id, "flag", correct=ok, detail="flag submission")
         if ok:
             await store.upsert_progress(user["id"], module_id, flag=True)
+
+    if already:
+        return {"correct": True, "status": "already_completed",
+                "message": "Already captured. This flag is already recorded on your account."}
     if ok:
-        message = (
-            "Correct. Now pass Fix-It to finish this lab."
-            if m.difficulty.lower() == "advanced" else "Correct."
-        )
-    else:
-        message = "Denied." if m.difficulty.lower() == "advanced" else "Not the right flag. Keep testing."
-    return {"correct": ok, "message": message}
+        return {"correct": True, "status": "valid",
+                "message": "Correct. Now pass Fix-It to finish this lab." if level in ("advanced", "expert") else "Correct."}
+    return {"correct": False, "status": "invalid",
+            "message": "Denied." if level in ("advanced", "expert") else "Not the right flag. Keep testing."}
 
 
 @router.post("/modules/{module_id}/fixit/validate")

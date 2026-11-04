@@ -4,10 +4,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# Groq and Gemini are the only real engines. `auto` (the default) is resolved
-# server-side: Groq/Gemini when a key is configured and the module supports
-# real models, otherwise the built-in deterministic simulator. There is no
-# engine picker in the UI and no third-party local model runtime.
+# Groq and Gemini are the only real engines. `auto` is resolved server-side:
+# Groq/Gemini when a key is configured and the module supports real models,
+# otherwise the built-in deterministic simulator.
 Engine = Literal["auto", "groq", "gemini"]
 
 

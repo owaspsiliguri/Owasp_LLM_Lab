@@ -19,6 +19,7 @@ class Settings:
     data_dir: Path
     cors_origins: tuple[str, ...]
     rate_limit_per_minute: int
+    flag_rate_limit_per_minute: int
     fixit_timeout_seconds: int
     supabase_url: str
     supabase_service_key: str
@@ -40,6 +41,7 @@ def get_settings() -> Settings:
         data_dir=Path(os.environ.get("LAB_DATA_DIR", "/tmp/llm-lab-data")),  # noqa: S108  # nosec B108 - dev default; Docker sets /data
         cors_origins=tuple(o.strip() for o in origins.split(",") if o.strip()),
         rate_limit_per_minute=_int("RATE_LIMIT_PER_MINUTE", 120),
+        flag_rate_limit_per_minute=_int("FLAG_RATE_LIMIT_PER_MINUTE", 20),
         fixit_timeout_seconds=_int("FIXIT_TIMEOUT_SECONDS", 8),
         supabase_url=os.environ.get("SUPABASE_URL", "").rstrip("/"),
         supabase_service_key=os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),

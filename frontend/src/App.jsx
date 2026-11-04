@@ -1,5 +1,6 @@
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
+import Icon from './components/Icons.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Home from './pages/Home.jsx'
 import Labs from './pages/Labs.jsx'
@@ -16,37 +17,59 @@ import Leaderboard from './pages/Leaderboard.jsx'
 import { useAuth } from './hooks/useAuth.jsx'
 import { isAuthEnabled } from './services/supabase.js'
 
-function PleaseWait() {
-  return <p className="p-8 text-fog-300">Loading your session…</p>
+function SessionLoading() {
+  return (
+    <div className="grid min-h-screen place-items-center bg-mist px-6" role="status" aria-live="polite">
+      <div className="flex items-center gap-3 text-sm text-slate-500">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" aria-hidden />
+        Restoring your session…
+      </div>
+    </div>
+  )
 }
 
-// Root: the public landing page for visitors, the dashboard once signed in.
-// Without Supabase credentials there is no login, so the dashboard is the home.
 function Root() {
   const { session, loading } = useAuth()
   if (!isAuthEnabled()) return <Dashboard />
-  if (loading) return <PleaseWait />
+  if (loading) return <SessionLoading />
   return session ? <Dashboard /> : <Home />
 }
 
-// Labs and personal pages require a session when Supabase is configured; in
-// local mode (no Supabase credentials) the app stays fully open.
 function RequireAuth({ children }) {
   const { session, loading } = useAuth()
   const location = useLocation()
   if (!isAuthEnabled()) return children
-  if (loading) return <PleaseWait />
-  if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  if (loading) return <SessionLoading />
+  if (!session) {
+    const from = `${location.pathname}${location.search}${location.hash}`
+    return <Navigate to="/login" replace state={{ from }} />
+  }
   return children
 }
 
 function RequireAdmin({ children }) {
-  const { session, profile, loading } = useAuth()
+  const { session, profile, loading, profileLoading } = useAuth()
   if (!isAuthEnabled()) return <Navigate to="/" replace />
-  if (loading) return <PleaseWait />
+  if (loading || profileLoading) return <SessionLoading />
   if (!session) return <Navigate to="/login" replace />
   if (!profile || profile.role !== 'admin') return <Navigate to="/" replace />
   return children
+}
+
+function NotFound() {
+  return (
+    <div className="mx-auto max-w-lg py-16 text-center">
+      <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500">
+        <Icon name="search" size={22} />
+      </span>
+      <h1 className="mt-4 text-2xl font-semibold text-ink">Page not found</h1>
+      <p className="mt-2 text-sm text-slate-600">That route is not part of the range. The labs are still where you left them.</p>
+      <div className="mt-6 flex justify-center gap-2">
+        <Link className="btn btn-primary" to="/labs">Browse labs</Link>
+        <Link className="btn" to="/">Back to dashboard</Link>
+      </div>
+    </div>
+  )
 }
 
 export default function App() {
@@ -65,7 +88,7 @@ export default function App() {
         <Route path="about" element={<About />} />
         <Route path="contribute" element={<Contribute />} />
         <Route path="admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
-        <Route path="*" element={<p className="p-8">Page not found. <Link className="text-neon underline" to="/">Back home</Link></p>} />
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   )

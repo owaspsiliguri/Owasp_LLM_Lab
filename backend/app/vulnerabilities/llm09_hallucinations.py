@@ -93,6 +93,7 @@ class Hallucinations(VulnerabilityModule):
     category = "LLM09:2025 Misinformation (hallucination)"
     owasp_id = "LLM09"
     difficulty = "Advanced"
+    hints_available = False
     estimated_minutes = 35
     prerequisites = ["LLM03 Data Poisoning", "What retrieval-augmented generation (RAG) is"]
     variant_help = {}

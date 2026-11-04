@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -82,6 +83,25 @@ async def _get(path: str) -> Any | None:
     except (httpx.HTTPError, ValueError) as exc:
         log.warning("Supabase unreachable while reading %s: %s", path, exc.__class__.__name__)
         return None
+
+
+async def has_flag(user_id: str, module_id: str) -> bool:
+    """Whether this user already has the lab's flag recorded server-side."""
+    rows = await _get(
+        f"progress?select=flag&user_id=eq.{quote(user_id, safe='')}&module_id=eq.{quote(module_id, safe='')}"
+    )
+    return bool(rows and rows[0].get("flag"))
+
+
+async def platform_stats() -> dict[str, int] | None:
+    """Real learner and completion counts, or None when Supabase is unavailable."""
+    rows = await _get("progress?select=user_id,flag,fixit")
+    if rows is None:
+        return None
+    return {
+        "learners": len({row["user_id"] for row in rows if row.get("user_id")}),
+        "completions": sum(1 for row in rows if row.get("flag") and row.get("fixit")),
+    }
 
 
 async def leaderboard_rows() -> list[dict[str, Any]] | None:
