@@ -37,6 +37,8 @@ class VulnerabilityModule(ABC):
     # True when the module can run on a real LLM (Groq/Gemini) as well as the
     # deterministic simulator. Simulated-infrastructure labs stay simulator-only.
     supports_real_llm: ClassVar[bool] = False
+    # Advanced labs may opt out of hints entirely; new labs keep progressive hints.
+    hints_available: ClassVar[bool] = True
     hints: ClassVar[list[str]]
     example_payloads: ClassVar[list[dict[str, str]]]
     remediation: ClassVar[str]
@@ -88,7 +90,9 @@ class VulnerabilityModule(ABC):
         return {
             **self.summary(), "threat": self.threat, "impact": self.impact, "mitigation": self.mitigation,
             "guided_steps": self.guided_steps, "expected_outcome": self.expected_outcome,
-            "challenge": self.challenge, "advanced_challenge": self.advanced_challenge, "hint_count": len(self.hints),
+            "challenge": self.challenge, "advanced_challenge": self.advanced_challenge,
+            "hint_count": len(self.hints) if self.hints_available else 0,
+            "hints_available": self.hints_available,
             "example_payloads": self.example_payloads,
             "remediation": self.remediation, "variants": self.variants,
             "variant_label": self.variant_label, "variant_help": self.variant_help,

@@ -1,47 +1,47 @@
 import { Fragment } from 'react'
 
-// Renders the markdown subset our guide generator emits: headings, quotes,
-// lists, tables, fenced code, rules, paragraphs and inline formatting.
-// Deliberately dependency-free so the guides work offline inside the app.
-
 function inline(text, keyBase = 'i') {
   const parts = []
   const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g
   let last = 0
-  let m
-  let i = 0
-  while ((m = pattern.exec(text)) !== null) {
-    if (m.index > last) parts.push(text.slice(last, m.index))
-    const token = m[0]
-    const key = `${keyBase}-${i++}`
-    if (token.startsWith('**')) parts.push(<strong key={key} className="font-semibold text-fog-100">{token.slice(2, -2)}</strong>)
-    else if (token.startsWith('`')) parts.push(<code key={key} className="rounded bg-ink-800 px-1 py-0.5 font-mono text-[0.9em] text-steel-400">{token.slice(1, -1)}</code>)
+  let match
+  let index = 0
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index))
+    const token = match[0]
+    const key = `${keyBase}-${index++}`
+    if (token.startsWith('**')) parts.push(<strong key={key} className="font-semibold text-ink">{token.slice(2, -2)}</strong>)
+    else if (token.startsWith('`')) parts.push(<code key={key} className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.86em] text-navy-800">{token.slice(1, -1)}</code>)
     else if (token.startsWith('[')) {
-      const match = /\[([^\]]+)\]\(([^)]+)\)/.exec(token)
-      const href = match[2]
+      const link = /\[([^\]]+)\]\(([^)]+)\)/.exec(token)
+      const href = link[2]
       const external = /^https?:\/\//.test(href)
       parts.push(
-        <a key={key} href={href} className="text-steel-400 underline" target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>
-          {match[1]}
+        <a key={key} href={href} className="text-brand-700 underline decoration-brand-300 underline-offset-2" target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>
+          {link[1]}
         </a>,
       )
     } else parts.push(<em key={key}>{token.slice(1, -1)}</em>)
-    last = m.index + token.length
+    last = match.index + token.length
   }
   if (last < text.length) parts.push(text.slice(last))
   return parts
 }
 
-function table(rows) {
+function Table({ rows }) {
   const [head, ...body] = rows
-  const cells = (line) => line.replace(/^\||\|$/g, '').split('|').map((c) => c.trim())
+  const cells = (line) => line.replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim())
   return (
-    <div className="overflow-x-auto rounded border border-ink-700">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-ink-800 text-fog-100"><tr>{cells(head).map((c, i) => <th key={i} className="px-3 py-2 font-medium">{inline(c, `h${i}`)}</th>)}</tr></thead>
-        <tbody className="text-fog-300">
-          {body.filter((r) => !/^\|?\s*:?-{3,}/.test(r.trim())).map((r, ri) => (
-            <tr key={ri} className="border-t border-ink-800">{cells(r).map((c, i) => <td key={i} className="px-3 py-2 align-top">{inline(c, `c${ri}-${i}`)}</td>)}</tr>
+    <div className="my-4 overflow-x-auto rounded-lg border border-line">
+      <table className="w-full min-w-[28rem] text-left text-sm">
+        <thead className="bg-slate-50 text-ink">
+          <tr>{cells(head).map((cell, index) => <th key={index} className="px-3 py-2 font-medium">{inline(cell, `h${index}`)}</th>)}</tr>
+        </thead>
+        <tbody className="text-slate-600">
+          {body.filter((row) => !/^\|?\s*:?-{3,}/.test(row.trim())).map((row, rowIndex) => (
+            <tr key={rowIndex} className="border-t border-line">
+              {cells(row).map((cell, index) => <td key={index} className="px-3 py-2 align-top">{inline(cell, `c${rowIndex}-${index}`)}</td>)}
+            </tr>
           ))}
         </tbody>
       </table>
@@ -52,60 +52,67 @@ function table(rows) {
 export default function Markdown({ source }) {
   const lines = String(source || '').replace(/\r\n/g, '\n').split('\n')
   const blocks = []
-  let i = 0
-  while (i < lines.length) {
-    const line = lines[i]
-    if (!line.trim()) { i += 1; continue }
+  let index = 0
+  while (index < lines.length) {
+    const line = lines[index]
+    if (!line.trim()) { index += 1; continue }
 
     if (line.startsWith('```')) {
       const code = []
-      i += 1
-      while (i < lines.length && !lines[i].startsWith('```')) { code.push(lines[i]); i += 1 }
-      i += 1
-      blocks.push(<pre key={i} className="overflow-x-auto rounded border border-ink-700 bg-ink-950 p-3 font-mono text-[13px] leading-relaxed text-fog-300">{code.join('\n')}</pre>)
+      index += 1
+      while (index < lines.length && !lines[index].startsWith('```')) { code.push(lines[index]); index += 1 }
+      index += 1
+      blocks.push(
+        <pre key={index} className="my-4 overflow-x-auto rounded-xl border border-navy-700 bg-navy-950 p-4 font-mono text-[13px] leading-relaxed text-slate-200">
+          <code>{code.join('\n')}</code>
+        </pre>,
+      )
       continue
     }
     if (/^#{1,4} /.test(line)) {
       const level = line.match(/^#+/)[0].length
       const text = line.replace(/^#+\s*/, '')
-      const cls = level <= 1 ? 'text-xl' : level === 2 ? 'text-lg' : 'text-base'
-      blocks.push(<div key={i} className={`${cls} font-semibold text-fog-100 ${level <= 2 ? 'mt-6' : 'mt-4'}`}>{inline(text, `t${i}`)}</div>)
-      i += 1
+      const className = level <= 1 ? 'mt-0 text-xl' : level === 2 ? 'mt-8 text-lg' : 'mt-5 text-base'
+      blocks.push(<h2 key={index} className={`${className} font-semibold text-ink`}>{inline(text, `t${index}`)}</h2>)
+      index += 1
       continue
     }
-    if (/^---+\s*$/.test(line)) { blocks.push(<hr key={i} className="border-ink-700" />); i += 1; continue }
+    if (/^---+\s*$/.test(line)) { blocks.push(<hr key={index} className="my-6 border-line" />); index += 1; continue }
     if (line.startsWith('>')) {
       const quote = []
-      while (i < lines.length && lines[i].startsWith('>')) { quote.push(lines[i].replace(/^>\s?/, '')); i += 1 }
+      while (index < lines.length && lines[index].startsWith('>')) { quote.push(lines[index].replace(/^>\s?/, '')); index += 1 }
       blocks.push(
-        <blockquote key={i} className="rounded-r border-l-2 border-steel-500 bg-ink-800/60 px-3 py-2 text-fog-300 space-y-1">
-          {quote.map((q, qi) => <p key={qi}>{inline(q, `q${i}-${qi}`)}</p>)}
+        <blockquote key={index} className="my-4 space-y-1 rounded-r-lg border-l-2 border-brand-500 bg-brand-50/60 px-4 py-3 text-sm text-slate-600">
+          {quote.map((text, quoteIndex) => <p key={quoteIndex}>{inline(text, `q${index}-${quoteIndex}`)}</p>)}
         </blockquote>,
       )
       continue
     }
     if (/^\|.*\|$/.test(line.trim())) {
       const rows = []
-      while (i < lines.length && lines[i].trim().startsWith('|')) { rows.push(lines[i].trim()); i += 1 }
-      blocks.push(<div key={i}>{table(rows)}</div>)
+      while (index < lines.length && lines[index].trim().startsWith('|')) { rows.push(lines[index].trim()); index += 1 }
+      blocks.push(<Table key={index} rows={rows} />)
       continue
     }
     if (/^[-*] /.test(line)) {
       const items = []
-      while (i < lines.length && /^[-*] /.test(lines[i])) { items.push(lines[i].replace(/^[-*] /, '')); i += 1 }
-      blocks.push(<ul key={i} className="list-disc space-y-1 pl-5 text-fog-300">{items.map((it, xi) => <li key={xi}>{inline(it, `u${i}-${xi}`)}</li>)}</ul>)
+      while (index < lines.length && /^[-*] /.test(lines[index])) { items.push(lines[index].replace(/^[-*] /, '')); index += 1 }
+      blocks.push(<ul key={index} className="my-3 list-disc space-y-1.5 pl-5 text-slate-600">{items.map((item, itemIndex) => <li key={itemIndex}>{inline(item, `u${index}-${itemIndex}`)}</li>)}</ul>)
       continue
     }
     if (/^\d+\. /.test(line)) {
       const items = []
-      while (i < lines.length && /^\d+\. /.test(lines[i])) { items.push(lines[i].replace(/^\d+\. /, '')); i += 1 }
-      blocks.push(<ol key={i} className="list-decimal space-y-1 pl-5 text-fog-300">{items.map((it, xi) => <li key={xi}>{inline(it, `o${i}-${xi}`)}</li>)}</ol>)
+      while (index < lines.length && /^\d+\. /.test(lines[index])) { items.push(lines[index].replace(/^\d+\. /, '')); index += 1 }
+      blocks.push(<ol key={index} className="my-3 list-decimal space-y-1.5 pl-5 text-slate-600">{items.map((item, itemIndex) => <li key={itemIndex}>{inline(item, `o${index}-${itemIndex}`)}</li>)}</ol>)
       continue
     }
-    const para = []
-    while (i < lines.length && lines[i].trim() && !/^(#{1,4} |```|[->*] |\d+\. |>|\|)/.test(lines[i])) { para.push(lines[i]); i += 1 }
-    if (!para.length) { i += 1; continue }
-    blocks.push(<p key={i} className="text-fog-300">{inline(para.join(' '), `p${i}`)}</p>)
+    const paragraph = []
+    while (index < lines.length && lines[index].trim() && !/^(#{1,4} |```|[->*] |\d+\. |>|\|)/.test(lines[index])) {
+      paragraph.push(lines[index])
+      index += 1
+    }
+    if (!paragraph.length) { index += 1; continue }
+    blocks.push(<p key={index} className="my-3 text-[15px] leading-7 text-slate-600">{inline(paragraph.join(' '), `p${index}`)}</p>)
   }
-  return <div className="space-y-3 text-[15px]">{blocks.map((b, k) => <Fragment key={k}>{b}</Fragment>)}</div>
+  return <div>{blocks.map((block, key) => <Fragment key={key}>{block}</Fragment>)}</div>
 }

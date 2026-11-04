@@ -1,0 +1,82 @@
+export const PATHS = [
+  {
+    slug: 'foundations',
+    title: 'Foundations: input and context',
+    description: 'How untrusted text and over-shared context break LLM applications. Start here if you are new to LLM security.',
+    learns: [
+      'Why one concatenated prompt channel is an attack surface',
+      'What must never enter a context window',
+      'Role separation, least-privilege context and output redaction',
+    ],
+    ids: ['llm01', 'llm02', 'llm11'],
+  },
+  {
+    slug: 'retrieval-integrity',
+    title: 'RAG and knowledge integrity',
+    description: 'Retrieval systems decide what the model believes. Poison the corpus, cross a tenant boundary, or hide instructions in a document.',
+    learns: [
+      'How poisoned and unverified documents steer answers',
+      'Why similarity search ignores ownership and clearance',
+      'Provenance, trust separation and grounded abstention',
+    ],
+    ids: ['llm03', 'llm13', 'llm14', 'llm09', 'llm12'],
+  },
+  {
+    slug: 'agents-and-tools',
+    title: 'Agents, tools and MCP',
+    description: 'Tool use turns a text generator into something that can act. Every one of these labs is about the gap between what the model asks for and what the user is allowed to do.',
+    learns: [
+      'How untrusted tool output re-enters the agent loop',
+      'Where function arguments and authorisation are trusted blindly',
+      'Deny-by-default policies for tool calls and MCP permissions',
+    ],
+    ids: ['llm07', 'llm15', 'llm16', 'llm17', 'llm18', 'llm21'],
+  },
+  {
+    slug: 'conversation-integrity',
+    title: 'Memory and conversation',
+    description: 'Context persists across turns and sessions. Two labs look at what happens when an attacker gets to write that context.',
+    learns: [
+      'Why gradual instruction shifts defeat single-turn filters',
+      'How memory poisoning survives into later sessions',
+      'Provenance and integrity controls for stored agent state',
+    ],
+    ids: ['llm19', 'llm18'],
+  },
+  {
+    slug: 'downstream-execution',
+    title: 'Model output as executable input',
+    description: 'Model output reaches browsers, SQL engines, shells and business logic. Handle it like any other untrusted input.',
+    learns: [
+      'Encoding output for the interpreter that consumes it',
+      'Parameterised queries and argument validation',
+      'Sandboxing generated code and bounding consumption',
+    ],
+    ids: ['llm10', 'llm22', 'llm05'],
+  },
+  {
+    slug: 'trust-and-oversight',
+    title: 'Trust, supply chain and oversight',
+    description: 'Dependencies you did not write, model judges you should not defer to, and resource limits that keep a service alive.',
+    learns: [
+      'Artifact verification and dependency pinning',
+      'Why confidence is not evidence of correctness',
+      'Quotas, complexity gates and human approval',
+    ],
+    ids: ['llm05', 'llm08', 'llm04', 'llm06'],
+  },
+  {
+    slug: 'full-track',
+    title: 'Full track',
+    description: 'Every lab in recommended order, from first prompt injection to generated-code execution. The complete range.',
+    learns: [
+      'Each OWASP Top 10 for LLM Applications risk, exploited and fixed',
+      'A portfolio of remediations validated against the original attack',
+    ],
+    ids: [
+      'llm01', 'llm02', 'llm11', 'llm03', 'llm13', 'llm14', 'llm09', 'llm12',
+      'llm07', 'llm15', 'llm16', 'llm17', 'llm20', 'llm19', 'llm18', 'llm21',
+      'llm10', 'llm22', 'llm05', 'llm08', 'llm04', 'llm06',
+    ],
+  },
+]

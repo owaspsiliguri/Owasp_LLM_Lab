@@ -67,6 +67,7 @@ class Overreliance(VulnerabilityModule):
     category = "LLM09:2025 Misinformation (overreliance)"
     owasp_id = "LLM08"
     difficulty = "Advanced"
+    hints_available = False
     estimated_minutes = 25
     prerequisites = ["LLM09 Hallucinations", "Reading unified diffs"]
     overview = (

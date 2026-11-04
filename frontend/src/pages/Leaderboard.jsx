@@ -1,8 +1,30 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api.js'
-import { Loading } from '../components/ui.jsx'
+import { EmptyState, Loading, PageHeader } from '../components/ui.jsx'
+import Icon from '../components/Icons.jsx'
 
-const MEDALS = ['🥇', '🥈', '🥉']
+function PodiumCard({ entry, me }) {
+  const highlight = me?.rank === entry.rank
+  return (
+    <article className={`card p-5 ${highlight ? 'border-brand-300 ring-2 ring-brand-100' : ''}`}>
+      <div className="flex items-center gap-3">
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${entry.rank === 1 ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+          {entry.rank}
+        </span>
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold text-ink" title={entry.display}>{entry.display}</h2>
+          <p className="text-xs text-slate-500">Rank {entry.rank}</p>
+        </div>
+      </div>
+      <p className="mt-4 text-2xl font-semibold tracking-tight text-ink">{entry.score}<span className="ml-1 text-xs font-normal text-slate-400">pts</span></p>
+      <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3 text-center text-xs">
+        <div><dt className="text-slate-400">Flags</dt><dd className="mt-0.5 font-medium text-slate-700">{entry.flags}</dd></div>
+        <div><dt className="text-slate-400">Fixes</dt><dd className="mt-0.5 font-medium text-slate-700">{entry.fixes}</dd></div>
+        <div><dt className="text-slate-400">Complete</dt><dd className="mt-0.5 font-medium text-slate-700">{entry.completed}</dd></div>
+      </dl>
+    </article>
+  )
+}
 
 export default function Leaderboard() {
   const [data, setData] = useState(null)
@@ -10,76 +32,122 @@ export default function Leaderboard() {
 
   useEffect(() => {
     let live = true
-    api.leaderboard().then((d) => live && setData(d)).catch((e) => live && setError(e.message))
+    api.leaderboard()
+      .then((result) => { if (live) setData(result) })
+      .catch((err) => { if (live) setError(err) })
     return () => { live = false }
   }, [])
 
-  if (error) return <Loading error={error} />
-  if (!data) return <Loading />
+  if (error) return <Loading error={error.message} onRetry={() => window.location.reload()} />
+  if (!data) return <Loading>Loading the ranking…</Loading>
 
   if (!data.enabled) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Global leaderboard</h1>
-        <div className="panel p-5">
-          <p className="text-fog-300">The global leaderboard appears when this deployment is connected to Supabase — scores are then computed server-side from every student's progress and attempt history.</p>
-          <p className="mt-2 text-sm text-fog-500">Local Docker mode keeps everything in your browser, so there is nothing to rank yet. Follow the deployment guide to enable it.</p>
-        </div>
+      <div className="space-y-5">
+        <PageHeader eyebrow="Community" title="Global leaderboard" description="Scores are computed server-side from persisted lab progress." />
+        <EmptyState
+          icon="leaderboard"
+          title="No global ranking on this deployment"
+          body="The leaderboard appears when the backend is connected to Supabase. Local mode keeps progress in the browser, so there are no accounts to rank."
+        />
       </div>
     )
   }
 
-  const top = data.entries
-  const podium = top.slice(0, 3)
-  const rest = top.slice(3)
+  const entries = data.entries || []
+  const podium = entries.slice(0, 3)
+  const rest = entries.slice(3)
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Global leaderboard</h1>
-        <p className="text-sm text-fog-500">Scoring: {data.formula}</p>
-      </div>
+      <PageHeader
+        eyebrow="Community"
+        title="Global leaderboard"
+        description="Ranked from persisted flags, validated fixes and explored labs. Identities are masked unless a learner sets a display name."
+        actions={<span className="badge badge-neutral">Scoring: {data.formula}</span>}
+      />
 
       {data.me && data.me.rank > 50 && (
-        <div className="panel border-steel-400/40 p-4 text-sm">
-          Your rank: <span className="font-semibold text-steel-400">#{data.me.rank}</span> — {data.me.score} pts
+        <div className="card flex flex-wrap items-center gap-3 border-brand-200 bg-brand-50/50 p-4">
+          <Icon name="trophy" size={18} className="text-brand-700" />
+          <p className="text-sm text-slate-700">
+            Your rank is <span className="font-semibold text-ink">#{data.me.rank}</span> with {data.me.score} points.
+          </p>
         </div>
       )}
 
-      {podium.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {podium.map((e) => (
-            <div key={e.rank} className={`panel p-4 text-center ${data.me && e.rank === data.me.rank ? 'border-steel-400/60' : ''}`}>
-              <div className="text-2xl">{MEDALS[e.rank - 1]}</div>
-              <div className="mt-1 truncate font-medium" title={e.display}>{e.display}</div>
-              <div className="text-lg font-semibold text-steel-400">{e.score}</div>
-              <div className="text-xs text-fog-500">{e.flags} flags · {e.fixes} fixes · {e.completed} complete</div>
-            </div>
-          ))}
-        </div>
+      {entries.length === 0 ? (
+        <EmptyState icon="trophy" title="No ranked learners yet" body="The leaderboard is live; it fills as accounts capture flags and validate fixes." />
+      ) : (
+        <>
+          {podium.length > 0 && (
+            <section aria-label="Top three" className="grid gap-4 sm:grid-cols-3">
+              {podium.map((entry) => <PodiumCard key={entry.rank} entry={entry} me={data.me} />)}
+            </section>
+          )}
+
+          {rest.length > 0 && (
+            <>
+              <section className="card hidden overflow-hidden md:block" aria-label="Full ranking">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[42rem] text-left text-sm">
+                    <thead className="border-b border-line bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th scope="col" className="px-4 py-2.5 font-medium">Rank</th>
+                        <th scope="col" className="px-4 py-2.5 font-medium">Learner</th>
+                        <th scope="col" className="px-4 py-2.5 font-medium">Score</th>
+                        <th scope="col" className="px-4 py-2.5 font-medium">Flags</th>
+                        <th scope="col" className="px-4 py-2.5 font-medium">Fixes</th>
+                        <th scope="col" className="px-4 py-2.5 font-medium">Explored</th>
+                        <th scope="col" className="px-4 py-2.5 font-medium">Complete</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {rest.map((entry) => {
+                        const me = data.me?.rank === entry.rank
+                        return (
+                          <tr key={entry.rank} className={me ? 'bg-brand-50/60' : 'hover:bg-slate-50/70'}>
+                            <td className="px-4 py-3 text-slate-500">{entry.rank}</td>
+                            <td className="px-4 py-3 font-medium text-ink">
+                              {entry.display}
+                              {me && <span className="ml-2 text-xs font-normal text-brand-700">(you)</span>}
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-ink">{entry.score}</td>
+                            <td className="px-4 py-3 text-slate-600">{entry.flags}</td>
+                            <td className="px-4 py-3 text-slate-600">{entry.fixes}</td>
+                            <td className="px-4 py-3 text-slate-600">{entry.explored}</td>
+                            <td className="px-4 py-3 text-slate-600">{entry.completed}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <ul className="space-y-2 md:hidden" aria-label="Full ranking">
+                {rest.map((entry) => {
+                  const me = data.me?.rank === entry.rank
+                  return (
+                    <li key={entry.rank} className={`card flex items-center gap-3 p-4 ${me ? 'border-brand-200 bg-brand-50/50' : ''}`}>
+                      <span className="w-7 shrink-0 text-sm font-medium text-slate-400">{entry.rank}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-ink">{entry.display}{me && <span className="ml-1.5 text-xs text-brand-700">(you)</span>}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{entry.flags} flags · {entry.fixes} fixes · {entry.completed} complete</p>
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-ink">{entry.score}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
+          )}
+        </>
       )}
 
-      <div className="panel overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-ink-700 text-fog-500">
-            <tr><th className="p-3">#</th><th className="p-3">Player</th><th className="p-3">Score</th><th className="p-3">Flags</th><th className="p-3">Fixes</th><th className="p-3">Explored</th><th className="p-3">Complete</th></tr>
-          </thead>
-          <tbody>
-            {rest.map((e) => (
-              <tr key={e.rank} className={`border-b border-ink-800 ${data.me && e.rank === data.me.rank ? 'bg-steel-500/10' : ''}`}>
-                <td className="p-3 text-fog-500">{e.rank}</td>
-                <td className="p-3 font-medium">{e.display}{data.me && e.rank === data.me.rank && <span className="ml-2 text-xs text-steel-400">(you)</span>}</td>
-                <td className="p-3 font-semibold text-steel-400">{e.score}</td>
-                <td className="p-3">{e.flags}</td>
-                <td className="p-3">{e.fixes}</td>
-                <td className="p-3">{e.explored}</td>
-                <td className="p-3">{e.completed}</td>
-              </tr>
-            ))}
-            {rest.length === 0 && <tr><td colSpan={7} className="p-4 text-fog-500">No ranked learners yet — be the first.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      <p className="text-xs leading-5 text-slate-500">
+        Only the top 50 accounts are listed. Personal progress is private; the public list exposes a masked name and aggregate counts.
+      </p>
     </div>
   )
 }

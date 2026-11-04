@@ -105,6 +105,7 @@ class ExcessiveAgency(VulnerabilityModule):
     category = "LLM06:2025 Excessive Agency"
     owasp_id = "LLM07"
     difficulty = "Advanced"
+    hints_available = False
     estimated_minutes = 30
     prerequisites = ["LLM01 Prompt Injection", "LLM10 Improper Output Handling"]
     overview = (

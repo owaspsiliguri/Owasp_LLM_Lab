@@ -1,59 +1,73 @@
 import { Link } from 'react-router-dom'
+import Icon from './Icons.jsx'
 
 const POINTS = [
-  ['12 labs, real exploits', 'Every lab runs a genuinely vulnerable app next to the secure version of the same feature.'],
-  ['Flags earned, never printed', 'A flag only appears once your payload actually reaches the secret. Typing “hi” gets you nothing.'],
-  ['Fix it in code, prove it', 'Write the remediation yourself and replay it against the same attack in a sandboxed validator.'],
+  ['Real vulnerable targets', 'Every lab runs a working vulnerable implementation next to the secure version of the same feature.'],
+  ['Flags you have to earn', 'A flag appears only when your payload actually reaches the secret. A benign message reveals nothing.'],
+  ['Fixes validated in code', 'Write the remediation yourself and replay the original attack against it in a sandbox.'],
 ]
 
-// Shared shell for the two public auth screens: brand story on the left,
-// form on the right. Collapses to a single centred column on small screens.
 export default function AuthShell({ title, subtitle, children, footer }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.1fr_minmax(0,0.9fr)]">
-      <aside className="relative hidden flex-col justify-between overflow-hidden border-r border-ink-700 bg-ink-950/60 p-10 lg:flex">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.35]"
-          style={{ backgroundImage: 'radial-gradient(circle at 20% 0%, rgba(0,255,156,0.16), transparent 55%), radial-gradient(circle at 90% 90%, rgba(56,189,248,0.12), transparent 50%)' }} />
-        <div className="relative">
-          <Link to="/" className="logo text-lg font-semibold"><span className="neon">&gt;_</span> LLM Learning Lab</Link>
-          <h2 className="mt-12 max-w-md text-3xl font-semibold leading-tight">
-            Break the model.<br /><span className="text-neon">Then write the fix.</span>
+    <div className="min-h-screen bg-mist lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+      <aside className="relative hidden overflow-hidden bg-navy-900 px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-16">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/10"
+        />
+        <div aria-hidden className="pointer-events-none absolute -right-10 top-10 h-72 w-72 rounded-full border border-white/5" />
+
+        <Link to="/" className="relative inline-flex w-fit items-center gap-2.5 rounded focus-visible:outline-white">
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-600"><Icon name="shield" size={19} /></span>
+          <span className="leading-tight">
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">OWASP</span>
+            <span className="block text-sm font-semibold">LLM Lab</span>
+          </span>
+        </Link>
+
+        <div className="relative my-10 max-w-md">
+          <span className="badge border-white/15 bg-white/5 text-slate-200">Hands-on LLM security</span>
+          <h2 className="mt-5 text-3xl font-semibold leading-tight xl:text-4xl">
+            Break the application.<br />Then prove the fix.
           </h2>
-          <p className="mt-3 max-w-md text-sm text-fog-300">
-            A hands-on range for the OWASP Top 10 for LLM Applications. Capture the flag, then repair the code that let you in.
+          <p className="mt-4 text-sm leading-6 text-slate-300">
+            A practical training range for the OWASP Top 10 for LLM Applications. Every challenge is a running
+            target, every flag is server-validated, and every remediation is tested against the original attack.
           </p>
           <ul className="mt-8 space-y-4">
-            {POINTS.map(([t, d]) => (
-              <li key={t} className="flex gap-3">
-                <span aria-hidden className="mt-1 font-mono text-neon">▸</span>
+            {POINTS.map(([point, detail]) => (
+              <li key={point} className="flex gap-3">
+                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/10 text-slate-200">
+                  <Icon name="check" size={13} />
+                </span>
                 <div>
-                  <div className="text-sm font-medium text-fog-100">{t}</div>
-                  <div className="text-sm text-fog-400">{d}</div>
+                  <p className="text-sm font-medium text-white">{point}</p>
+                  <p className="mt-0.5 text-sm leading-6 text-slate-400">{detail}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
-        <pre className="relative mt-10 overflow-x-auto rounded-md border border-ink-700 bg-black/60 p-4 font-mono text-[12px] leading-relaxed text-fog-400">
-{`$ curl -s -X POST /api/modules/llm01/vulnerable \\
-    -d '{"input":"Ignore previous instructions…"}'
-{"leaked": true, "output": "…FLAG{llm01_…}"}
 
-$ curl -s -X POST /api/modules/llm01/secure \\
-    -d '{"input":"Ignore previous instructions…"}'
-{"leaked": false, "controls": ["role separation"]}`}
-        </pre>
+        <p className="relative text-xs leading-5 text-slate-500">
+          Training environment only. Do not use these techniques against systems you do not own or have permission to test.
+        </p>
       </aside>
 
-      <main className="flex items-center justify-center px-4 py-10 sm:px-8">
-        <div className="w-full max-w-md">
-          <Link to="/" className="logo mb-6 inline-block text-base font-semibold lg:hidden"><span className="neon">&gt;_</span> LLM Learning Lab</Link>
-          <div className="panel p-6 sm:p-7">
-            <h1 className="text-xl font-semibold">{title}</h1>
-            <p className="mt-1 text-sm text-fog-300">{subtitle}</p>
-            <div className="mt-5">{children}</div>
+      <main className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-8">
+        <div className="w-full max-w-[26rem]">
+          <Link to="/" className="mb-6 inline-flex items-center gap-2.5 rounded lg:hidden">
+            <span className="grid h-9 w-9 place-items-center rounded-lg bg-navy-900 text-white"><Icon name="shield" size={18} /></span>
+            <span className="text-sm font-semibold text-ink">OWASP LLM Lab</span>
+          </Link>
+
+          <div className="card p-6 sm:p-8">
+            <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">{title}</h1>
+            {subtitle && <p className="mt-1.5 text-sm leading-6 text-slate-600">{subtitle}</p>}
+            <div className="mt-6">{children}</div>
           </div>
-          {footer && <div className="mt-4 text-center text-sm text-fog-300">{footer}</div>}
+
+          {footer && <div className="mt-5 text-center text-sm text-slate-600">{footer}</div>}
         </div>
       </main>
     </div>

@@ -123,6 +123,7 @@ class VectorWeaknesses(VulnerabilityModule):
     # collide with the Overreliance lab's badge).
     owasp_id = "LLM12"
     difficulty = "Advanced"
+    hints_available = False
     supports_real_llm = False
     estimated_minutes = 35
     prerequisites = ["LLM03 Training Data and Knowledge Base Poisoning"]
