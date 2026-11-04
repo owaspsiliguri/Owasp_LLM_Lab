@@ -48,7 +48,7 @@ export default function FixIt({ module }) {
         <div>
           <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
             <label className="text-sm font-medium text-ink" htmlFor={`fixit-${module.id}`}>
-              Edit <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-navy-800">{module.fixit.function}</code>
+              Edit <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-brand-400">{module.fixit.function}</code>
             </label>
             <span className="text-xs text-slate-500">{code.split('\n').length} lines</span>
           </div>
@@ -56,7 +56,7 @@ export default function FixIt({ module }) {
             id={`fixit-${module.id}`}
             aria-label={`Fix-It code editor for ${module.fixit.function}`}
             spellCheck={false}
-            className="h-72 w-full resize-y rounded-xl border border-navy-700 bg-navy-950 p-4 font-mono text-[12.5px] leading-6 text-slate-100 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+            className="h-72 w-full resize-y rounded-xl border border-ink-700 bg-ink-950 p-4 font-mono text-[12.5px] leading-6 text-slate-100 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
             value={code}
             onChange={(event) => setCode(event.target.value)}
           />
@@ -106,7 +106,7 @@ export default function FixIt({ module }) {
             </div>
 
             {result.tests?.length > 0 && (
-              <ul className="mt-3 space-y-1 border-t border-black/5 pt-3">
+              <ul className="mt-3 space-y-1 border-t border-line pt-3">
                 {[...result.tests].sort((a, b) => Number(a.passed) - Number(b.passed)).map((test) => (
                   <li key={test.name} className="flex items-start gap-2 text-sm">
                     <span className={`mt-0.5 shrink-0 ${test.passed ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -122,7 +122,7 @@ export default function FixIt({ module }) {
             )}
 
             {result.review && (
-              <p className="mt-3 rounded-lg border border-line bg-white p-3 text-sm text-slate-600">
+              <p className="mt-3 rounded-lg border border-line bg-ink-900 p-3 text-sm text-slate-600">
                 <span className="font-medium text-ink">Reviewer note (advisory).</span> {result.review}
               </p>
             )}

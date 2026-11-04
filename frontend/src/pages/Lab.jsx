@@ -113,7 +113,7 @@ function Hints({ module }) {
         <ol className="mt-3 space-y-2" aria-live="polite">
           {hints.map((hint, index) => (
             <li key={hint} className="flex gap-2.5 rounded-lg border border-line bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-[11px] font-medium text-slate-500 ring-1 ring-line">{index + 1}</span>
+              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink-900 text-[11px] font-medium text-slate-500 ring-1 ring-line">{index + 1}</span>
               <span>{hint}</span>
             </li>
           ))}
@@ -143,7 +143,7 @@ function Scoring({ entry }) {
           return (
             <li key={field} className="flex items-center justify-between gap-2 text-sm">
               <span className="flex items-center gap-2">
-                <span className={`grid h-4 w-4 place-items-center rounded-full ${done ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-transparent'}`}>
+                <span className={`grid h-4 w-4 place-items-center rounded-full ${done ? 'bg-emerald-600 text-ink-950' : 'border border-ink-600 text-transparent'}`}>
                   <Icon name="check" size={10} strokeWidth={3} />
                 </span>
                 <span className={done ? 'text-slate-700' : 'text-slate-500'}>{label}</span>
@@ -217,7 +217,7 @@ function TabPanel({ tab, module, entry, backTo }) {
   if (tab === 'fixit') {
     return (
       <div className="space-y-4">
-        <div className="rounded-xl border border-line bg-white p-5">
+        <div className="rounded-xl border border-line bg-ink-900 p-5">
           <h2 className="text-base font-semibold text-ink">Fix the vulnerability, not the test</h2>
           <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-600">
             The sandbox replays the original attack against your implementation and runs regression checks so a shortcut
@@ -310,11 +310,11 @@ function TabPanel({ tab, module, entry, backTo }) {
 }
 
 function LabSequence({ prev, next, position, total, linkFor }) {
-  const base = 'flex min-h-[52px] min-w-0 items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-left'
+  const base = 'flex min-h-[52px] min-w-0 items-center gap-2 rounded-lg border border-line bg-ink-900 px-3 py-2 text-left'
   return (
     <nav aria-label="Lab navigation" className="grid grid-cols-2 gap-2 border-t border-line pt-5 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-3">
       {prev ? (
-        <Link to={linkFor(prev)} className={`${base} transition-colors hover:border-slate-300 hover:bg-slate-50`} rel="prev">
+        <Link to={linkFor(prev)} className={`${base} transition-colors hover:border-ink-600 hover:bg-slate-50`} rel="prev">
           <Icon name="chevronLeft" size={16} className="shrink-0 text-slate-400" />
           <span className="min-w-0">
             <span className="block text-[11px] text-slate-400">Previous</span>
@@ -336,7 +336,7 @@ function LabSequence({ prev, next, position, total, linkFor }) {
       </span>
 
       {next ? (
-        <Link to={linkFor(next)} className={`${base} justify-end text-right transition-colors hover:border-slate-300 hover:bg-slate-50`} rel="next">
+        <Link to={linkFor(next)} className={`${base} justify-end text-right transition-colors hover:border-ink-600 hover:bg-slate-50`} rel="next">
           <span className="min-w-0">
             <span className="block text-[11px] text-slate-400">Next</span>
             <span className="block truncate text-sm font-medium text-ink">{next.name}</span>

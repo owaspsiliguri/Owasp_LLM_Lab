@@ -91,7 +91,7 @@ export default function Profile() {
 
       <section className="card p-5 sm:p-6" aria-label="Account">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <span aria-hidden className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-navy-900 text-xl font-semibold text-white">
+          <span aria-hidden className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-ink-600 bg-ink-800 text-xl font-semibold text-brand-400">
             {initials(displayName)}
           </span>
           <div className="min-w-0 flex-1">

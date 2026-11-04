@@ -65,7 +65,7 @@ export default function Home() {
 
   return (
     <div className="space-y-12 pb-6 sm:space-y-16">
-      <section className="relative overflow-hidden rounded-2xl bg-navy-900 text-white">
+      <section className="scanlines relative overflow-hidden rounded-2xl border border-ink-700 bg-ink-900 text-white">
         <div aria-hidden className="pointer-events-none absolute -right-24 -top-32 h-[26rem] w-[26rem] rounded-full border border-white/10" />
         <div aria-hidden className="pointer-events-none absolute -right-4 -top-16 h-[26rem] w-[26rem] rounded-full border border-white/5" />
 
@@ -83,7 +83,7 @@ export default function Home() {
               implementations, earn server-validated flags, then write and prove the remediation.
             </p>
             <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">
-              <Link to="/labs" className="btn btn-primary btn-lg border-brand-500 bg-brand-500 hover:bg-brand-600">
+              <Link to="/labs" className="btn btn-primary btn-lg">
                 Explore labs
                 <Icon name="arrowRight" size={16} />
               </Link>
@@ -104,7 +104,7 @@ export default function Home() {
             <ol className="mt-4 space-y-4">
               {STEPS.map(([title, body], index) => (
                 <li key={title} className="flex gap-3">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/15 bg-navy-950 font-mono text-xs text-slate-300">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/15 bg-ink-950 font-mono text-xs text-slate-300">
                     {index + 1}
                   </span>
                   <div className="min-w-0">
@@ -114,7 +114,7 @@ export default function Home() {
                 </li>
               ))}
             </ol>
-            <div className="mt-5 rounded-lg border border-white/10 bg-navy-950/60 px-3 py-2.5">
+            <div className="mt-5 rounded-lg border border-white/10 bg-ink-950/60 px-3 py-2.5">
               <p className="font-mono text-[11px] leading-5 text-slate-400">
                 <span className="text-slate-500">$</span> flag = only_when_attack_reaches_secret()
               </p>
@@ -241,7 +241,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="flex flex-col gap-5 rounded-2xl border border-line bg-white p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+      <section className="flex flex-col gap-5 rounded-2xl border border-line bg-ink-900 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
         <div>
           <h2 className="text-xl font-semibold text-ink">Ready to break something?</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">

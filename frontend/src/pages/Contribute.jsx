@@ -57,7 +57,7 @@ export default function Contribute() {
           </ol>
           <p className="mt-5 rounded-lg border border-line bg-slate-50 p-3 text-sm text-slate-600">
             Questions at any step? Email{' '}
-            <a className="font-medium text-brand-700 underline decoration-brand-300 underline-offset-2" href="mailto:owaspsiliguri@gmail.com">owaspsiliguri@gmail.com</a>
+            <a className="font-medium text-brand-700 underline decoration-brand-500/50 underline-offset-2" href="mailto:owaspsiliguri@gmail.com">owaspsiliguri@gmail.com</a>
             {' '}and a human will help.
           </p>
         </section>
@@ -73,7 +73,7 @@ export default function Contribute() {
               </li>
               <li>
                 Send it to{' '}
-                <a className="font-medium text-brand-700 underline decoration-brand-300 underline-offset-2" href="mailto:owaspsiliguri@gmail.com">owaspsiliguri@gmail.com</a>
+                <a className="font-medium text-brand-700 underline decoration-brand-500/50 underline-offset-2" href="mailto:owaspsiliguri@gmail.com">owaspsiliguri@gmail.com</a>
                 {' '}or open a pull request against the project repository.
               </li>
             </ol>
@@ -93,7 +93,7 @@ export default function Contribute() {
         </div>
       </div>
 
-      <section className="rounded-xl border border-line bg-white p-5 sm:p-6">
+      <section className="rounded-xl border border-line bg-ink-900 p-5 sm:p-6">
         <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
           <Icon name="shield" size={17} className="text-slate-500" />
           Security issues in the platform itself
@@ -101,7 +101,7 @@ export default function Contribute() {
         <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">
           The labs are meant to be vulnerable; the platform around them is not. If you find a real flaw in authentication,
           flag protection, progress isolation or the code sandbox, report it privately to{' '}
-          <a className="font-medium text-brand-700 underline decoration-brand-300 underline-offset-2" href="mailto:owaspsiliguri@gmail.com">owaspsiliguri@gmail.com</a>
+          <a className="font-medium text-brand-700 underline decoration-brand-500/50 underline-offset-2" href="mailto:owaspsiliguri@gmail.com">owaspsiliguri@gmail.com</a>
           {' '}first. We will work with you on a fix before anything is disclosed.
         </p>
       </section>

@@ -10,13 +10,13 @@ function Timeline({ timeline }) {
   const points = values.map((value, index) => `${(index / Math.max(values.length - 1, 1)) * 300},${70 - (value / top) * 66}`).join(' ')
   const limitY = limit ? 70 - (limit / top) * 66 : null
   return (
-    <figure className="rounded-lg border border-line bg-white p-3">
+    <figure className="rounded-lg border border-line bg-ink-900 p-3">
       <figcaption className="mb-1 text-xs text-slate-500">
         {label}: final {values[values.length - 1]?.toLocaleString()}{limit ? ` (limit ${limit})` : ''}
       </figcaption>
       <svg role="img" aria-label={label} viewBox="0 0 300 72" className="h-20 w-full">
-        {limitY !== null && <line x1="0" x2="300" y1={limitY} y2={limitY} stroke="#b45309" strokeDasharray="4 3" strokeWidth="1" />}
-        <polyline points={points} fill="none" stroke="#1d4ed8" strokeWidth="2" />
+        {limitY !== null && <line x1="0" x2="300" y1={limitY} y2={limitY} stroke="#ffc857" strokeDasharray="4 3" strokeWidth="1" />}
+        <polyline points={points} fill="none" stroke="#00e59b" strokeWidth="2" />
       </svg>
     </figure>
   )
@@ -29,7 +29,7 @@ function DataTable({ label, rows }) {
     <div className="overflow-x-auto rounded-lg border border-line">
       <table aria-label={label} className="w-full min-w-[26rem] text-left text-xs">
         <caption className="border-b border-line bg-slate-50 px-3 py-2 text-left font-medium text-slate-600">{label}</caption>
-        <thead className="bg-white text-slate-500">
+        <thead className="bg-ink-800 text-slate-500">
           <tr>{columns.map((column) => <th key={column} scope="col" className="px-3 py-1.5 font-normal">{column}</th>)}</tr>
         </thead>
         <tbody>
@@ -55,7 +55,7 @@ function asText(value) {
 function Result({ title, tone, data, error }) {
   const leaked = Boolean(data?.leaked)
   return (
-    <section aria-label={`${title} result`} className="min-w-0 rounded-xl border border-line bg-white">
+    <section aria-label={`${title} result`} className="min-w-0 rounded-xl border border-line bg-ink-900">
       <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-2.5">
         <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
           <span className={`h-2 w-2 rounded-full ${tone === 'vuln' ? 'bg-red-500' : 'bg-emerald-600'}`} aria-hidden />
@@ -171,7 +171,7 @@ export default function RunPanel({ module }) {
 
   return (
     <div className="space-y-4">
-      <section aria-label="Target environment" className="overflow-hidden rounded-xl border border-navy-800 bg-navy-900 text-white shadow-card">
+      <section aria-label="Target environment" className="overflow-hidden rounded-xl border border-ink-700 bg-ink-950 text-white shadow-card">
         <header className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2">
             <Icon name="terminal" size={16} className="text-slate-300" />
@@ -189,7 +189,7 @@ export default function RunPanel({ module }) {
               <label className="text-xs font-medium text-slate-300" htmlFor={`variant-${module.id}`}>{module.variant_label}</label>
               <select
                 id={`variant-${module.id}`}
-                className="w-full rounded-lg border border-white/15 bg-navy-950 px-3 py-2 text-sm text-white focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+                className="w-full rounded-lg border border-white/15 bg-ink-950 px-3 py-2 text-sm text-white focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
                 value={variant || ''}
                 onChange={(event) => setVariant(event.target.value)}
               >
@@ -208,7 +208,7 @@ export default function RunPanel({ module }) {
             </div>
             <textarea
               id={`payload-${module.id}`}
-              className="h-28 w-full resize-y rounded-lg border border-white/15 bg-navy-950 px-3 py-2 font-mono text-[13px] leading-6 text-slate-100 placeholder:text-slate-500 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+              className="h-28 w-full resize-y rounded-lg border border-white/15 bg-ink-950 px-3 py-2 font-mono text-[13px] leading-6 text-slate-100 placeholder:text-slate-500 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
               maxLength={2000}
               value={input}
               onChange={(event) => setInput(event.target.value)}

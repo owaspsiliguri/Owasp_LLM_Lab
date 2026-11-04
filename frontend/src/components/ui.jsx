@@ -52,10 +52,10 @@ function highlight(code, language) {
 }
 
 export function CodeBlock({ code, label, tone = 'neutral', language = 'python', className = '', wrap = false }) {
-  const edge = tone === 'vuln' ? 'border-red-900/70' : tone === 'safe' ? 'border-emerald-900/70' : 'border-navy-700'
+  const edge = tone === 'vuln' ? 'border-red-900/70' : tone === 'safe' ? 'border-emerald-900/70' : 'border-ink-700'
   const body = useMemo(() => highlight(String(code ?? ''), language), [code, language])
   return (
-    <figure className={`overflow-hidden rounded-xl border ${edge} bg-navy-950 ${className}`}>
+    <figure className={`overflow-hidden rounded-xl border ${edge} bg-ink-950 ${className}`}>
       {label && (
         <figcaption className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5 text-xs font-medium text-slate-300">
           <span className="truncate">{label}</span>
@@ -127,7 +127,7 @@ export function Loading({ error, children, onRetry }) {
   }
   return (
     <div className="flex items-center gap-3 py-8 text-sm text-slate-500" role="status">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" aria-hidden />
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-ink-600 border-t-brand-600" aria-hidden />
       {children || 'Loading…'}
     </div>
   )
