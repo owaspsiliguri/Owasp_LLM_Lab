@@ -249,8 +249,12 @@ function BackgroundTab({ module, backTo }) {
 function ChallengeTab({ module, entry, runner }) {
   return (
     <div className="space-y-6">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
-        <div className="min-w-0 space-y-4">
+      {/* Mobile order is brief -> workspace -> hints/scoring. On desktop the brief
+          occupies row 1 and hints/scoring row 2 of the main column, while the
+          workspace rail spans both rows. That keeps both columns the same height
+          instead of leaving a hole under the shorter one. */}
+      <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_23rem] xl:items-start">
+        <div className="order-1 min-w-0 space-y-4 xl:col-start-1 xl:row-start-1">
           <section className="card p-5">
             <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-fg-subtle">Scenario</h2>
             <p className="mt-1.5 text-[15px] leading-7 text-fg-muted">{module.overview}</p>
@@ -277,7 +281,7 @@ function ChallengeTab({ module, entry, runner }) {
           </section>
         </div>
 
-        <aside className="min-w-0 space-y-4 lg:sticky lg:top-[7rem] lg:self-start">
+        <aside className="order-2 min-w-0 space-y-4 xl:sticky xl:top-[7rem] xl:col-start-2 xl:row-span-2 xl:row-start-1">
           <RunPanel module={module} runner={runner} />
 
           <section className="card p-4" aria-labelledby="flag-heading">
@@ -287,10 +291,12 @@ function ChallengeTab({ module, entry, runner }) {
             </div>
             <div className="mt-3"><FlagForm module={module} /></div>
           </section>
+        </aside>
 
+        <div className="order-3 grid min-w-0 gap-4 sm:grid-cols-2 xl:col-start-1 xl:row-start-2">
           <Hints module={module} />
           <Scoring entry={entry} />
-        </aside>
+        </div>
       </div>
 
       <RunResults module={module} runner={runner} />
@@ -298,49 +304,73 @@ function ChallengeTab({ module, entry, runner }) {
   )
 }
 
-function LabSequence({ prev, next, position, total, linkFor }) {
-  const base = 'flex min-h-[48px] min-w-0 items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-left transition-colors hover:border-line-strong hover:bg-surface-2'
-  return (
-    <nav aria-label="Lab navigation" className="grid grid-cols-2 gap-2 border-t border-line pt-5 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-3">
-      {prev ? (
-        <Link to={linkFor(prev)} className={base} rel="prev">
-          <Icon name="chevronLeft" size={15} className="shrink-0 text-fg-subtle" />
-          <span className="min-w-0">
-            <span className="block text-[11px] text-fg-subtle">Previous</span>
-            <span className="block truncate text-sm font-medium text-fg">{prev.name}</span>
-          </span>
-        </Link>
-      ) : (
-        <span aria-disabled="true" className={`${base} border-dashed hover:border-line hover:bg-surface`}>
-          <Icon name="chevronLeft" size={15} className="shrink-0 text-fg-subtle" />
-          <span className="min-w-0">
-            <span className="block text-[11px] text-fg-subtle">Previous</span>
-            <span className="block truncate text-sm text-fg-muted">Start of this sequence</span>
-          </span>
-        </span>
-      )}
+function SequenceCard({ direction, module, linkFor }) {
+  const isPrev = direction === 'prev'
+  const label = isPrev ? 'Previous' : 'Next'
+  const chevron = (
+    <Icon
+      name={isPrev ? 'chevronLeft' : 'chevronRight'}
+      size={16}
+      className={`shrink-0 text-fg-subtle transition-transform duration-150 ${
+        module ? (isPrev ? 'group-hover:-translate-x-0.5' : 'group-hover:translate-x-0.5') : ''
+      }`}
+    />
+  )
 
-      <span className="hidden whitespace-nowrap px-2 text-xs text-fg-subtle sm:block">
+  const text = (
+    <span className="min-w-0 flex-1">
+      <span className="block text-[11px] font-medium uppercase tracking-wide text-fg-subtle">{label}</span>
+      <span className={`mt-0.5 block truncate text-sm font-medium ${module ? 'text-fg' : 'text-fg-muted'}`}>
+        {module ? module.name : isPrev ? 'First lab in this sequence' : 'Last lab in this sequence'}
+      </span>
+    </span>
+  )
+
+  const badge = module ? (
+    <span className="hidden shrink-0 rounded-md border border-line bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-fg-subtle sm:block">
+      {riskOf(module).code}
+    </span>
+  ) : null
+
+  if (!module) {
+    return (
+      <span
+        aria-disabled="true"
+        className="flex min-h-[3.25rem] min-w-0 items-center gap-3 rounded-lg border border-dashed border-line px-3 py-2.5"
+      >
+        {isPrev ? chevron : null}
+        {text}
+        {isPrev ? null : chevron}
+      </span>
+    )
+  }
+
+  const content = isPrev ? <>{chevron}{text}{badge}</> : <>{text}{badge}{chevron}</>
+
+  return (
+    <Link
+      to={linkFor(module)}
+      rel={isPrev ? 'prev' : 'next'}
+      className="group flex min-h-[3.25rem] min-w-0 items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2.5 text-left transition-colors hover:border-line-strong hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+    >
+      {content}
+    </Link>
+  )
+}
+
+function LabSequence({ prev, next, position, total, linkFor }) {
+  return (
+    <nav
+      aria-label="Lab navigation"
+      className="grid grid-cols-2 gap-2 border-t border-line pt-5 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-3"
+    >
+      <SequenceCard direction="prev" module={prev} linkFor={linkFor} />
+
+      <span className="hidden whitespace-nowrap px-2 text-xs tabular-nums text-fg-subtle sm:block">
         {position > 0 ? `Lab ${position} of ${total}` : `${total} labs`}
       </span>
 
-      {next ? (
-        <Link to={linkFor(next)} className={`${base} justify-end text-right`} rel="next">
-          <span className="min-w-0">
-            <span className="block text-[11px] text-fg-subtle">Next</span>
-            <span className="block truncate text-sm font-medium text-fg">{next.name}</span>
-          </span>
-          <Icon name="chevronRight" size={15} className="shrink-0 text-fg-subtle" />
-        </Link>
-      ) : (
-        <span aria-disabled="true" className={`${base} justify-end border-dashed text-right hover:border-line hover:bg-surface`}>
-          <span className="min-w-0">
-            <span className="block text-[11px] text-fg-subtle">Next</span>
-            <span className="block truncate text-sm text-fg-muted">Last lab in this sequence</span>
-          </span>
-          <Icon name="chevronRight" size={15} className="shrink-0 text-fg-subtle" />
-        </span>
-      )}
+      <SequenceCard direction="next" module={next} linkFor={linkFor} />
     </nav>
   )
 }
@@ -455,7 +485,7 @@ export default function Lab() {
     <div className="space-y-5">
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="badge badge-neutral font-mono">{module.owasp_id}</span>
+          <span className="badge badge-neutral font-mono">{risk.code}</span>
           <Badge tone={module.difficulty}>{module.difficulty}</Badge>
           <Badge><Icon name="clock" size={12} /> {module.estimated_minutes} min</Badge>
           <Badge><Icon name="target" size={12} /> {LAB_MAX_POINTS} pts</Badge>

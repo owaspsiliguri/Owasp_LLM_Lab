@@ -38,8 +38,8 @@ export default function Contribute() {
         description="This platform is built by the OWASP Siliguri community and open to everyone. Write a lab, sharpen an explanation, fix a bug or report what confused you."
       />
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <section className="card p-5 sm:p-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <section className="card flex flex-col p-5 sm:p-6">
           <h2 className="text-base font-semibold text-ink">Join the chapter</h2>
           <ol className="mt-4 space-y-5">
             {STEPS.map((step, index) => (
@@ -55,6 +55,7 @@ export default function Contribute() {
               </li>
             ))}
           </ol>
+          <div className="flex-1" aria-hidden />
           <p className="mt-5 rounded-lg border border-line bg-slate-50 p-3 text-sm text-slate-600">
             Questions at any step? Email{' '}
             <a className="font-medium text-brand-700 underline decoration-brand-500/50 underline-offset-2" href="mailto:owaspsiliguri@gmail.com">owaspsiliguri@gmail.com</a>
@@ -93,7 +94,7 @@ export default function Contribute() {
         </div>
       </div>
 
-      <section className="rounded-xl border border-line bg-ink-900 p-5 sm:p-6">
+      <section className="card border-line bg-surface-2 p-5 sm:p-6">
         <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
           <Icon name="shield" size={17} className="text-slate-500" />
           Security issues in the platform itself

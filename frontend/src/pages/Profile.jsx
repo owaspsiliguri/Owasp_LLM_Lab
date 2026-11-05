@@ -128,7 +128,7 @@ export default function Profile() {
         <ProgressBar value={summary.percent} className="mt-2" label="Overall progress" />
       </section>
 
-      <div className="grid items-start gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <section className="card p-5 sm:p-6">
           <h2 className="text-base font-semibold text-ink">Display name</h2>
           <p className="mt-1 text-sm leading-6 text-slate-600">Shown on the leaderboard and in the admin roster. Leave it blank to appear as a masked email address.</p>

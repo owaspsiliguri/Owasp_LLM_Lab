@@ -107,7 +107,11 @@ export default function Labs() {
             <label className="mb-1.5 block text-xs font-medium text-slate-500" htmlFor="lab-category">OWASP risk</label>
             <select id="lab-category" className="input" value={filters.category} onChange={(event) => update('category', event.target.value)}>
               <option value="All">All risks</option>
-              {risks.map((risk) => <option key={risk.code} value={risk.code}>{risk.code} — {risk.name}</option>)}
+              {risks.map((risk) => (
+                <option key={risk.code} value={risk.code}>
+                  {risk.code} — {risk.name} ({risk.count} {risk.count === 1 ? 'lab' : 'labs'})
+                </option>
+              ))}
             </select>
           </div>
 

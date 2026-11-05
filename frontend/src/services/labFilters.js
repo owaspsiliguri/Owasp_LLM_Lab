@@ -21,8 +21,16 @@ export function riskOf(module) {
 }
 
 export function risksIn(modules) {
-  const codes = [...new Set(modules.map((module) => riskOf(module).code))]
-  return codes.map((code) => ({ code, name: RISK_NAMES[code] || code, count: modules.filter((module) => riskOf(module).code === code).length }))
+  const counts = new Map()
+  for (const module of modules) {
+    const { code } = riskOf(module)
+    counts.set(code, (counts.get(code) || 0) + 1)
+  }
+  // Ordered by risk number, not by wherever the lab happens to sit in the
+  // catalogue: LLM01, LLM02, … LLM10.
+  return [...counts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right, 'en', { numeric: true }))
+    .map(([code, count]) => ({ code, name: RISK_NAMES[code] || code, count }))
 }
 
 export const STATUS_FILTERS = [

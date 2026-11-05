@@ -192,7 +192,7 @@ a { color: inherit; }
 
 @layer components {
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-2 text-sm font-medium transition-[background-color,border-color,color,box-shadow] duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[2.25rem] select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-2 text-sm font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 disabled:cursor-not-allowed disabled:opacity-45;
     border-color: rgb(var(--border-strong));
     background-color: rgb(var(--surface));
     color: rgb(var(--text-primary));
@@ -202,18 +202,35 @@ a { color: inherit; }
     background-color: rgb(var(--surface-2));
     border-color: rgb(var(--text-muted));
   }
-  .btn:active:not(:disabled) { background-color: rgb(var(--surface-3)); }
+  .btn:active:not(:disabled) {
+    background-color: rgb(var(--surface-3));
+    transform: translateY(0.5px);
+  }
+  .btn:focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+  }
 
   .btn-primary {
     border-color: rgb(var(--accent-strong));
     background-color: rgb(var(--accent));
     color: rgb(var(--accent-contrast));
     font-weight: 600;
-    box-shadow: none;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 1px 2px rgb(0 0 0 / 0.18);
   }
   .btn-primary:hover:not(:disabled) {
     background-color: rgb(var(--accent-strong));
     border-color: rgb(var(--accent-strong));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 2px 8px rgb(var(--accent) / 0.28);
+  }
+  /* A dimmed neon green reads as a bruise. Disabled primaries drop to the
+     neutral surface so they look unavailable rather than broken. */
+  .btn-primary:disabled {
+    border-color: rgb(var(--border));
+    background-color: rgb(var(--surface-2));
+    color: rgb(var(--text-muted));
+    box-shadow: none;
+    opacity: 1;
   }
 
   .btn-secondary {
@@ -243,8 +260,8 @@ a { color: inherit; }
     background-color: rgb(var(--danger-tint));
     color: rgb(var(--danger-text));
   }
-  .btn-sm { @apply rounded-md px-2.5 py-1.5 text-xs; }
-  .btn-lg { @apply rounded-lg px-4 py-2.5 text-sm; }
+  .btn-sm { @apply min-h-[1.875rem] rounded-md px-2.5 py-1 text-xs; }
+  .btn-lg { @apply min-h-[2.75rem] rounded-lg px-4 py-2.5 text-sm; }
 
   .input {
     @apply w-full rounded-lg border px-3 py-2 text-sm transition-[border-color,box-shadow] duration-150;
@@ -366,11 +383,32 @@ a { color: inherit; }
     color: rgb(var(--accent-text));
   }
 
+  /* Horizontal scrollers (tab strips, chip rows) hide the native bar so a strip
+     that overflows on a phone does not draw a second scrollbar inside the page. */
+  .scroll-x {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 1rem;
+  }
+  .scroll-x::-webkit-scrollbar { display: none; }
+  /* Applied only while the strip actually overflows, so the last tab is not
+     dimmed on a wide screen. */
+  .scroll-fade {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  }
+
   .tab {
     @apply relative inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150;
     color: rgb(var(--text-muted));
   }
   .tab:hover { color: rgb(var(--text-primary)); background-color: rgb(var(--surface-2)); }
+  .tab:focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 1px;
+  }
   .tab-active { color: rgb(var(--text-primary)); background-color: rgb(var(--surface-2)); }
   .tab-active::after {
     content: '';

@@ -1,11 +1,29 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
  * Accessible tab list. Arrow keys / Home / End move focus and selection, which
  * is the behaviour the lab page relies on for its Challenge / Background tabs.
+ * The strip scrolls horizontally on narrow screens; a mask on the trailing edge
+ * shows there is more to reach when it does.
  */
 export default function Tabs({ tabs, value, onChange, label, className = '', idPrefix = 'tab' }) {
   const refs = useRef([])
+  const listRef = useRef(null)
+  const [overflowing, setOverflowing] = useState(false)
+
+  useEffect(() => {
+    const list = listRef.current
+    if (!list) return undefined
+    const measure = () => setOverflowing(list.scrollWidth - list.clientWidth > 1)
+    measure()
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure)
+      return () => window.removeEventListener('resize', measure)
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(list)
+    return () => observer.disconnect()
+  }, [tabs.length])
 
   function onKeyDown(event, index) {
     let target = null
@@ -20,7 +38,12 @@ export default function Tabs({ tabs, value, onChange, label, className = '', idP
   }
 
   return (
-    <div role="tablist" aria-label={label} className={`flex items-center gap-1 overflow-x-auto ${className}`}>
+    <div
+      ref={listRef}
+      role="tablist"
+      aria-label={label}
+      className={`scroll-x flex items-center gap-1 ${overflowing ? 'scroll-fade' : ''} ${className}`}
+    >
       {tabs.map((tab, index) => {
         const selected = value === tab.value
         return (

@@ -3,6 +3,7 @@ import { api } from '../services/api.js'
 import { useProgress } from '../hooks/useProgress.jsx'
 import { useToast } from './Toast.jsx'
 import Icon from './Icons.jsx'
+import { Button } from './ui'
 import { POINTS } from '../services/points.js'
 
 const FLAG_PATTERN = /^FLAG\{[^}\s]+\}$/
@@ -74,24 +75,14 @@ export default function FlagForm({ module, disabled = false }) {
           aria-invalid={feedback?.tone === 'error' ? true : undefined}
           disabled={busy || disabled}
         />
-        <p id={`flag-${module.id}-help`} className="mt-1 text-xs text-slate-500">
+        <p id={`flag-${module.id}-help`} className="mt-1 text-xs leading-5 text-fg-subtle">
           Worth {POINTS.flag} points. Press Enter or use the button to submit; validation happens on the server.
         </p>
       </div>
 
-      <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={busy || disabled}>
-        {busy ? (
-          <>
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden />
-            Checking…
-          </>
-        ) : (
-          <>
-            <Icon name="flag" size={15} />
-            Submit flag
-          </>
-        )}
-      </button>
+      <Button type="submit" variant="primary" className="w-full" disabled={disabled} loading={busy}>
+        {busy ? 'Checking…' : 'Submit flag'}
+      </Button>
 
       <div aria-live="polite">
         {feedback && (
