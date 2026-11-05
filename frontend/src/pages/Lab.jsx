@@ -3,23 +3,23 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../services/api.js'
 import { useModules } from '../hooks/useModules.js'
 import { labStatus, useProgress } from '../hooks/useProgress.jsx'
-import { DIFFICULTIES, filterQuery, riskOf, sequenceFor } from '../services/labFilters.js'
+import { filterQuery, riskOf, sequenceFor } from '../services/labFilters.js'
 import { PATHS } from '../content/paths.js'
 import { LAB_MAX_POINTS, POINT_ROWS, labPoints } from '../services/points.js'
-import { Badge, CodeBlock, DifficultyBadge, EmptyState, Loading } from '../components/ui.jsx'
+import { Badge, Button, CodeBlock, CodeDiff, EmptyState, Loading, ProgressBar, Tabs } from '../components/ui'
 import Markdown from '../components/Markdown.jsx'
-import RunPanel from '../components/RunPanel.jsx'
+import RunPanel, { RunResults, useRun } from '../components/RunPanel.jsx'
 import FixIt from '../components/FixIt.jsx'
 import FlagForm from '../components/FlagForm.jsx'
 import Icon from '../components/Icons.jsx'
 import { GUIDES } from '../content/guides.js'
 
 const TABS = [
-  ['challenge', 'Challenge'],
-  ['background', 'Background'],
-  ['fixit', 'Fix-It'],
-  ['code', 'Code'],
-  ['guide', 'Guide'],
+  { value: 'challenge', label: 'Challenge' },
+  { value: 'background', label: 'Background' },
+  { value: 'fixit', label: 'Fix-It' },
+  { value: 'code', label: 'Code' },
+  { value: 'guide', label: 'Guide' },
 ]
 
 const STATUS = {
@@ -60,7 +60,7 @@ function loadDetail(id, force = false) {
 function ReadList({ items, ordered = false }) {
   const Tag = ordered ? 'ol' : 'ul'
   return (
-    <Tag className={`${ordered ? 'list-decimal' : 'list-disc'} space-y-1.5 pl-5 text-sm leading-6 text-slate-600`}>
+    <Tag className={`${ordered ? 'list-decimal' : 'list-disc'} space-y-1.5 pl-5 text-sm leading-6 text-fg-muted marker:text-fg-subtle`}>
       {items.map((item) => <li key={item}>{item}</li>)}
     </Tag>
   )
@@ -73,10 +73,12 @@ function Hints({ module }) {
 
   if (!module.hints_available) {
     return (
-      <section className="card p-5">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Icon name="lightbulb" size={16} /> Hints</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          This lab has no hints. The target and the brief are everything you get — work the mechanism out from the response.
+      <section className="card p-4" aria-labelledby={`hints-${module.id}`}>
+        <h2 id={`hints-${module.id}`} className="flex items-center gap-2 text-sm font-semibold text-fg">
+          <Icon name="lightbulb" size={15} className="text-fg-muted" /> Hints
+        </h2>
+        <p className="mt-1.5 text-xs leading-5 text-fg-muted">
+          This lab has no hints. The brief and the target are everything you get — work the mechanism out from the response.
         </p>
       </section>
     )
@@ -100,31 +102,30 @@ function Hints({ module }) {
   const exhausted = hints.length >= total
 
   return (
-    <section className="card p-5" aria-labelledby={`hints-${module.id}`}>
+    <section className="card p-4" aria-labelledby={`hints-${module.id}`}>
       <div className="flex items-center justify-between gap-2">
-        <h2 id={`hints-${module.id}`} className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <Icon name="lightbulb" size={16} /> Hints
+        <h2 id={`hints-${module.id}`} className="flex items-center gap-2 text-sm font-semibold text-fg">
+          <Icon name="lightbulb" size={15} className="text-fg-muted" /> Hints
         </h2>
-        <span className="text-xs text-slate-500">{hints.length} of {total} revealed</span>
+        <span className="text-xs tabular-nums text-fg-subtle">{hints.length}/{total}</span>
       </div>
-      <p className="mt-1 text-xs leading-5 text-slate-500">Hints unlock one at a time and never reduce your score.</p>
 
       {hints.length > 0 && (
-        <ol className="mt-3 space-y-2" aria-live="polite">
+        <ol className="mt-2.5 space-y-2" aria-live="polite">
           {hints.map((hint, index) => (
-            <li key={hint} className="flex gap-2.5 rounded-lg border border-line bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink-900 text-[11px] font-medium text-slate-500 ring-1 ring-line">{index + 1}</span>
+            <li key={hint} className="flex gap-2 rounded-md border border-line bg-surface-2 p-2.5 text-xs leading-5 text-fg-muted">
+              <span className="font-mono text-[11px] font-medium text-accent-text">{index + 1}</span>
               <span>{hint}</span>
             </li>
           ))}
         </ol>
       )}
 
-      {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-xs text-danger-text">{error}</p>}
 
-      <button type="button" className="btn btn-sm mt-3" onClick={reveal} disabled={busy || exhausted || total === 0}>
-        {exhausted ? 'No more hints' : busy ? 'Revealing…' : `Reveal hint ${hints.length + 1} of ${total}`}
-      </button>
+      <Button size="sm" className="mt-2.5 w-full" onClick={reveal} disabled={busy || exhausted || total === 0} loading={busy}>
+        {exhausted ? 'No more hints' : `Reveal hint ${hints.length + 1} of ${total}`}
+      </Button>
     </section>
   )
 }
@@ -132,23 +133,29 @@ function Hints({ module }) {
 function Scoring({ entry }) {
   const earned = labPoints(entry)
   return (
-    <section className="card p-5" aria-labelledby="scoring-heading">
+    <section className="card p-4" aria-labelledby="scoring-heading">
       <div className="flex items-center justify-between">
-        <h2 id="scoring-heading" className="text-sm font-semibold text-ink">Scoring</h2>
-        <span className="text-sm font-medium text-ink">{earned} <span className="font-normal text-slate-400">/ {LAB_MAX_POINTS}</span></span>
+        <h2 id="scoring-heading" className="text-sm font-semibold text-fg">Scoring</h2>
+        <span className="text-sm tabular-nums text-fg">
+          <span className="font-semibold">{earned}</span>
+          <span className="text-fg-subtle"> / {LAB_MAX_POINTS}</span>
+        </span>
       </div>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-2.5 space-y-1.5">
         {POINT_ROWS.map(({ field, label, points }) => {
           const done = Boolean(entry[field])
           return (
-            <li key={field} className="flex items-center justify-between gap-2 text-sm">
-              <span className="flex items-center gap-2">
-                <span className={`grid h-4 w-4 place-items-center rounded-full ${done ? 'bg-emerald-600 text-ink-950' : 'border border-ink-600 text-transparent'}`}>
-                  <Icon name="check" size={10} strokeWidth={3} />
+            <li key={field} className="flex items-center justify-between gap-2 text-xs">
+              <span className="flex min-w-0 items-center gap-2">
+                <span
+                  className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border ${done ? 'border-success bg-success text-[color:var(--accent-contrast)]' : 'border-line-strong text-transparent'}`}
+                  aria-hidden
+                >
+                  <Icon name="check" size={9} strokeWidth={3} />
                 </span>
-                <span className={done ? 'text-slate-700' : 'text-slate-500'}>{label}</span>
+                <span className={done ? 'text-fg' : 'text-fg-muted'}>{label}</span>
               </span>
-              <span className={done ? 'font-medium text-emerald-700' : 'text-slate-400'}>+{points}</span>
+              <span className={`shrink-0 tabular-nums ${done ? 'font-medium text-success-text' : 'text-fg-subtle'}`}>+{points}</span>
             </li>
           )
         })}
@@ -157,199 +164,181 @@ function Scoring({ entry }) {
   )
 }
 
-function TabPanel({ tab, module, entry, backTo }) {
-  if (tab === 'background') {
-    return (
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="card p-5 sm:p-6">
-          <h2 className="text-base font-semibold text-ink">Threat model</h2>
-          <dl className="mt-3 space-y-4 text-sm">
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">OWASP mapping</dt>
-              <dd className="mt-0.5 text-slate-700">{module.category}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Threat</dt>
-              <dd className="mt-0.5 leading-6 text-slate-600">{module.threat}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Impact if exploited</dt>
-              <dd className="mt-0.5 leading-6 text-slate-600">{module.impact}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section className="card p-5 sm:p-6">
-          <h2 className="text-base font-semibold text-ink">Mitigation</h2>
-          <div className="mt-3"><ReadList items={module.mitigation} /></div>
-          <p className="mt-4 border-t border-line pt-4 text-sm leading-6 text-slate-600">{module.remediation}</p>
-        </section>
-
-        <section className="card p-5 sm:p-6">
-          <h2 className="text-base font-semibold text-ink">Before you start</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{module.expected_outcome}</p>
-          {module.prerequisites.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-1.5">
-              {module.prerequisites.map((item) => <li key={item}><Badge>{item}</Badge></li>)}
-            </ul>
-          )}
-        </section>
-
-        <section className="card p-5 sm:p-6">
-          <h2 className="text-base font-semibold text-ink">This lab</h2>
-          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <div><dt className="text-xs text-slate-400">Difficulty</dt><dd className="mt-0.5 text-slate-700">{module.difficulty}</dd></div>
-            <div><dt className="text-xs text-slate-400">Estimated time</dt><dd className="mt-0.5 text-slate-700">{module.estimated_minutes} minutes</dd></div>
-            <div><dt className="text-xs text-slate-400">Points available</dt><dd className="mt-0.5 text-slate-700">{LAB_MAX_POINTS}</dd></div>
-            <div><dt className="text-xs text-slate-400">Format</dt><dd className="mt-0.5 text-slate-700">Self-paced, browser-based</dd></div>
-          </dl>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link className="btn btn-sm" to={backTo}>{backTo === '/paths' ? 'Back to path' : 'All labs'}</Link>
-            {module.difficulty === 'Beginner' && module.guided_steps?.length > 0 && (
-              <span className="self-center text-xs text-slate-500">A guided walkthrough is included on the challenge tab.</span>
-            )}
-          </div>
-        </section>
-      </div>
-    )
-  }
-
-  if (tab === 'fixit') {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-xl border border-line bg-ink-900 p-5">
-          <h2 className="text-base font-semibold text-ink">Fix the vulnerability, not the test</h2>
-          <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-600">
-            The sandbox replays the original attack against your implementation and runs regression checks so a shortcut
-            that breaks legitimate input does not pass. Every check is deterministic and runs server-side.
-            {['Advanced', 'Expert'].includes(module.difficulty) && ' This level requires both the flag and a passing fix to count as complete.'}
-          </p>
-        </div>
-        <FixIt module={module} />
-      </div>
-    )
-  }
-
-  if (tab === 'code') {
-    return (
-      <div className="space-y-4">
-        <p className="text-sm leading-6 text-slate-600">
+function CodeTab({ module }) {
+  const [view, setView] = useState('split')
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-reading text-sm leading-6 text-fg-muted">
           Both implementations are live source served by the API. Compare what the vulnerable build trusts with what the secure build validates.
         </p>
+        <div className="flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5" role="group" aria-label="Code view">
+          <button type="button" onClick={() => setView('split')} aria-pressed={view === 'split'} className={`tab ${view === 'split' ? 'tab-active' : ''}`}>Side by side</button>
+          <button type="button" onClick={() => setView('diff')} aria-pressed={view === 'diff'} className={`tab ${view === 'diff' ? 'tab-active' : ''}`}>Diff</button>
+        </div>
+      </div>
+
+      {view === 'split' ? (
         <div className="grid gap-4 xl:grid-cols-2">
           <CodeBlock tone="vuln" label="Vulnerable implementation" code={module.vulnerable_code} />
           <CodeBlock tone="safe" label="Secure implementation" code={module.secure_code} />
         </div>
-      </div>
-    )
-  }
+      ) : (
+        <CodeDiff before={module.vulnerable_code} after={module.secure_code} />
+      )}
+    </div>
+  )
+}
 
-  if (tab === 'guide') {
-    const guide = GUIDES[module.id]
-    return guide ? (
-      <article className="card max-w-4xl p-5 sm:p-7">
-        <Markdown source={guide} />
-      </article>
-    ) : (
-      <EmptyState icon="book" title="No guide compiled for this lab" body="The challenge tab still contains the full brief, and the backend source is on the Code tab." />
-    )
-  }
-
+function BackgroundTab({ module, backTo }) {
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] xl:items-start">
-      <section className="card p-5 sm:p-6 xl:col-start-1 xl:row-start-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-700">Scenario</p>
-        <p className="mt-1.5 text-[15px] leading-7 text-slate-600">{module.overview}</p>
-
-        <div className="mt-5 rounded-lg border border-line bg-slate-50 p-4">
-          <h2 className="text-sm font-semibold text-ink">Your objective</h2>
-          <p className="mt-1 text-sm leading-6 text-slate-600">{module.challenge}</p>
-        </div>
-
-        <h2 className="mt-5 text-sm font-semibold text-ink">Learning objectives</h2>
-        <div className="mt-2"><ReadList items={module.objectives} /></div>
-
-        {module.difficulty === 'Beginner' && module.guided_steps?.length > 0 && (
-          <>
-            <h2 className="mt-5 text-sm font-semibold text-ink">Suggested approach</h2>
-            <div className="mt-2"><ReadList ordered items={module.guided_steps} /></div>
-          </>
-        )}
-
-        <p className="mt-5 border-t border-line pt-4 text-sm leading-6 text-slate-500">
-          <span className="font-medium text-slate-700">Expected outcome:</span> {module.expected_outcome}
-        </p>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <section className="card p-5">
+        <h2 className="text-sm font-semibold text-fg">Threat model</h2>
+        <dl className="mt-3 space-y-3.5 text-sm">
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">OWASP mapping</dt>
+            <dd className="mt-0.5 text-fg">{module.category}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">Threat</dt>
+            <dd className="mt-0.5 leading-6 text-fg-muted">{module.threat}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">Impact if exploited</dt>
+            <dd className="mt-0.5 leading-6 text-fg-muted">{module.impact}</dd>
+          </div>
+        </dl>
       </section>
 
-      <div className="min-w-0 xl:col-start-2 xl:row-start-1">
-        <RunPanel module={module} />
-      </div>
+      <section className="card p-5">
+        <h2 className="text-sm font-semibold text-fg">Mitigation</h2>
+        <div className="mt-3"><ReadList items={module.mitigation} /></div>
+        <p className="mt-3 border-t border-line pt-3 text-sm leading-6 text-fg-muted">{module.remediation}</p>
+      </section>
 
-      <div className="space-y-4 xl:col-start-1 xl:row-start-2">
-        <Hints module={module} />
-        <Scoring entry={entry} />
-      </div>
+      <section className="card p-5">
+        <h2 className="text-sm font-semibold text-fg">Before you start</h2>
+        <p className="mt-2 text-sm leading-6 text-fg-muted">{module.expected_outcome}</p>
+        {module.prerequisites.length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-1.5">
+            {module.prerequisites.map((item) => <li key={item}><Badge>{item}</Badge></li>)}
+          </ul>
+        )}
+      </section>
 
-      <section className="card p-5 sm:p-6 xl:col-start-2 xl:row-start-2" aria-labelledby="flag-heading">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 id="flag-heading" className="text-base font-semibold text-ink">Submit the flag</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">{module.challenge}</p>
-          </div>
-          <Badge tone={entry.flag ? 'success' : 'neutral'}>{entry.flag ? 'Captured' : 'Not captured'}</Badge>
+      <section className="card p-5">
+        <h2 className="text-sm font-semibold text-fg">This lab</h2>
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <div><dt className="text-xs text-fg-subtle">Difficulty</dt><dd className="mt-0.5 text-fg">{module.difficulty}</dd></div>
+          <div><dt className="text-xs text-fg-subtle">Estimated time</dt><dd className="mt-0.5 text-fg">{module.estimated_minutes} minutes</dd></div>
+          <div><dt className="text-xs text-fg-subtle">Points available</dt><dd className="mt-0.5 text-fg">{LAB_MAX_POINTS}</dd></div>
+          <div><dt className="text-xs text-fg-subtle">Format</dt><dd className="mt-0.5 text-fg">Self-paced, browser-based</dd></div>
+        </dl>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button as={Link} to={backTo} size="sm">{backTo === '/paths' ? 'Back to path' : 'All labs'}</Button>
+          {module.difficulty === 'Beginner' && module.guided_steps?.length > 0 && (
+            <span className="text-xs text-fg-subtle">A guided walkthrough is on the Challenge tab.</span>
+          )}
         </div>
-        <div className="mt-4">
-          <FlagForm module={module} />
-        </div>
-        <p className="mt-4 border-t border-line pt-3 text-xs leading-5 text-slate-500">
-          The flag is checked against the server-side secret and is never included in the page or API catalogue.
-        </p>
       </section>
     </div>
   )
 }
 
+function ChallengeTab({ module, entry, runner }) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
+        <div className="min-w-0 space-y-4">
+          <section className="card p-5">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-fg-subtle">Scenario</h2>
+            <p className="mt-1.5 text-[15px] leading-7 text-fg-muted">{module.overview}</p>
+            <div className="mt-4 rounded-lg border border-line bg-surface-2 p-3.5">
+              <h3 className="text-sm font-semibold text-fg">Your objective</h3>
+              <p className="mt-1 text-sm leading-6 text-fg-muted">{module.challenge}</p>
+            </div>
+          </section>
+
+          <section className="card p-5">
+            <h2 className="text-sm font-semibold text-fg">Learning objectives</h2>
+            <div className="mt-2"><ReadList items={module.objectives} /></div>
+
+            {module.difficulty === 'Beginner' && module.guided_steps?.length > 0 && (
+              <>
+                <h2 className="mt-4 text-sm font-semibold text-fg">Suggested approach</h2>
+                <div className="mt-2"><ReadList ordered items={module.guided_steps} /></div>
+              </>
+            )}
+
+            <p className="mt-4 border-t border-line pt-3 text-sm leading-6 text-fg-subtle">
+              <span className="font-medium text-fg-muted">Expected outcome:</span> {module.expected_outcome}
+            </p>
+          </section>
+        </div>
+
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-[7rem] lg:self-start">
+          <RunPanel module={module} runner={runner} />
+
+          <section className="card p-4" aria-labelledby="flag-heading">
+            <div className="flex items-start justify-between gap-2">
+              <h2 id="flag-heading" className="text-sm font-semibold text-fg">Submit the flag</h2>
+              <Badge tone={entry.flag ? 'success' : 'neutral'}>{entry.flag ? 'Captured' : 'Not captured'}</Badge>
+            </div>
+            <div className="mt-3"><FlagForm module={module} /></div>
+          </section>
+
+          <Hints module={module} />
+          <Scoring entry={entry} />
+        </aside>
+      </div>
+
+      <RunResults module={module} runner={runner} />
+    </div>
+  )
+}
+
 function LabSequence({ prev, next, position, total, linkFor }) {
-  const base = 'flex min-h-[52px] min-w-0 items-center gap-2 rounded-lg border border-line bg-ink-900 px-3 py-2 text-left'
+  const base = 'flex min-h-[48px] min-w-0 items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-left transition-colors hover:border-line-strong hover:bg-surface-2'
   return (
     <nav aria-label="Lab navigation" className="grid grid-cols-2 gap-2 border-t border-line pt-5 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-3">
       {prev ? (
-        <Link to={linkFor(prev)} className={`${base} transition-colors hover:border-ink-600 hover:bg-slate-50`} rel="prev">
-          <Icon name="chevronLeft" size={16} className="shrink-0 text-slate-400" />
+        <Link to={linkFor(prev)} className={base} rel="prev">
+          <Icon name="chevronLeft" size={15} className="shrink-0 text-fg-subtle" />
           <span className="min-w-0">
-            <span className="block text-[11px] text-slate-400">Previous</span>
-            <span className="block truncate text-sm font-medium text-ink">{prev.name}</span>
+            <span className="block text-[11px] text-fg-subtle">Previous</span>
+            <span className="block truncate text-sm font-medium text-fg">{prev.name}</span>
           </span>
         </Link>
       ) : (
-        <span aria-disabled="true" className={`${base} border-dashed text-slate-400 opacity-70`}>
-          <Icon name="chevronLeft" size={16} className="shrink-0" />
+        <span aria-disabled="true" className={`${base} border-dashed hover:border-line hover:bg-surface`}>
+          <Icon name="chevronLeft" size={15} className="shrink-0 text-fg-subtle" />
           <span className="min-w-0">
-            <span className="block text-[11px]">Previous</span>
-            <span className="block truncate text-sm">Start of this sequence</span>
+            <span className="block text-[11px] text-fg-subtle">Previous</span>
+            <span className="block truncate text-sm text-fg-muted">Start of this sequence</span>
           </span>
         </span>
       )}
 
-      <span className="hidden whitespace-nowrap px-2 text-xs text-slate-500 sm:block">
+      <span className="hidden whitespace-nowrap px-2 text-xs text-fg-subtle sm:block">
         {position > 0 ? `Lab ${position} of ${total}` : `${total} labs`}
       </span>
 
       {next ? (
-        <Link to={linkFor(next)} className={`${base} justify-end text-right transition-colors hover:border-ink-600 hover:bg-slate-50`} rel="next">
+        <Link to={linkFor(next)} className={`${base} justify-end text-right`} rel="next">
           <span className="min-w-0">
-            <span className="block text-[11px] text-slate-400">Next</span>
-            <span className="block truncate text-sm font-medium text-ink">{next.name}</span>
+            <span className="block text-[11px] text-fg-subtle">Next</span>
+            <span className="block truncate text-sm font-medium text-fg">{next.name}</span>
           </span>
-          <Icon name="chevronRight" size={16} className="shrink-0 text-slate-400" />
+          <Icon name="chevronRight" size={15} className="shrink-0 text-fg-subtle" />
         </Link>
       ) : (
-        <span aria-disabled="true" className={`${base} justify-end border-dashed text-right text-slate-400 opacity-70`}>
+        <span aria-disabled="true" className={`${base} justify-end border-dashed text-right hover:border-line hover:bg-surface`}>
           <span className="min-w-0">
-            <span className="block text-[11px]">Next</span>
-            <span className="block truncate text-sm">Last lab in this sequence</span>
+            <span className="block text-[11px] text-fg-subtle">Next</span>
+            <span className="block truncate text-sm text-fg-muted">Last lab in this sequence</span>
           </span>
-          <Icon name="chevronRight" size={16} className="shrink-0" />
+          <Icon name="chevronRight" size={15} className="shrink-0 text-fg-subtle" />
         </span>
       )}
     </nav>
@@ -367,7 +356,6 @@ export default function Lab() {
   const [detail, setDetail] = useState(() => peekDetail(id))
   const [detailError, setDetailError] = useState(null)
   const [tab, setTab] = useState('challenge')
-  const tabRefs = useRef([])
 
   const queryKey = searchParams.toString()
   const filters = useMemo(() => {
@@ -409,6 +397,9 @@ export default function Lab() {
   const linkFor = (module) => `/labs/${module.id}${filterQuery(filters)}`
   const selectedPath = PATHS.find((path) => path.slug === filters.path)
 
+  const module = detail
+  const runner = useRun(module)
+
   useEffect(() => {
     if (!detail) return undefined
     const previous = document.title
@@ -424,7 +415,7 @@ export default function Lab() {
         icon="search"
         title="Lab not found"
         body={`There is no lab with the id "${id}". The catalogue lists every available challenge.`}
-        action={<Link className="btn btn-primary" to="/labs">Browse labs</Link>}
+        action={<Button as={Link} to="/labs" variant="primary">Browse labs</Button>}
       />
     )
   }
@@ -435,95 +426,101 @@ export default function Lab() {
           icon="search"
           title="Lab not found"
           body="This lab is no longer in the catalogue. Its detail endpoint returned 404."
-          action={<Link className="btn btn-primary" to="/labs">Browse labs</Link>}
+          action={<Button as={Link} to="/labs" variant="primary">Browse labs</Button>}
         />
       )
     }
     return (
       <div className="space-y-3">
         <Loading error={detailError.message} />
-        <button
-          type="button"
-          className="btn"
+        <Button
           onClick={() => {
             setDetailError(null)
             loadDetail(id, true).then(setDetail).catch(setDetailError)
           }}
         >
           Try again
-        </button>
+        </Button>
       </div>
     )
   }
-  if (!detail) return <Loading>Loading the lab…</Loading>
+  if (!module) return <Loading>Loading the lab…</Loading>
 
-  const module = detail
   const entry = progress.modules[id] || {}
   const [statusLabel, statusClass] = STATUS[labStatus(entry)]
   const risk = riskOf(module)
-
-  function onTabKey(event, tabIndex) {
-    let target = null
-    if (event.key === 'ArrowRight') target = (tabIndex + 1) % TABS.length
-    else if (event.key === 'ArrowLeft') target = (tabIndex - 1 + TABS.length) % TABS.length
-    else if (event.key === 'Home') target = 0
-    else if (event.key === 'End') target = TABS.length - 1
-    if (target === null) return
-    event.preventDefault()
-    setTab(TABS[target][0])
-    tabRefs.current[target]?.focus()
-  }
+  const earned = labPoints(entry)
 
   return (
     <div className="space-y-5">
-      <header>
-        <div className="flex flex-wrap items-center gap-2">
-          {position > 0 && <Badge tone="brand">Lab {position} of {effective.length}</Badge>}
-          <DifficultyBadge level={module.difficulty} />
-          <Badge>{module.owasp_id}</Badge>
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="badge badge-neutral font-mono">{module.owasp_id}</span>
+          <Badge tone={module.difficulty}>{module.difficulty}</Badge>
           <Badge><Icon name="clock" size={12} /> {module.estimated_minutes} min</Badge>
           <Badge><Icon name="target" size={12} /> {LAB_MAX_POINTS} pts</Badge>
           <span className={`badge ${statusClass}`}>{statusLabel}</span>
+          {position > 0 && <span className="text-xs text-fg-subtle">Lab {position} of {effective.length}</span>}
         </div>
 
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-[30px]">{module.name}</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              {risk.code} · {risk.name}
-              {selectedPath && <> · <span className="text-slate-600">{selectedPath.title}</span></>}
+            <h1 className="text-display-sm font-semibold">{module.name}</h1>
+            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-fg-muted">
+              <span className="font-mono text-xs text-fg-subtle">{risk.code}</span>
+              <span aria-hidden>·</span>
+              <span>{risk.name}</span>
+              {selectedPath && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="text-fg-subtle">{selectedPath.title}</span>
+                </>
+              )}
             </p>
           </div>
-          <Link to={backTo} className="btn btn-sm shrink-0">
-            <Icon name="arrowLeft" size={14} />
-            {filters.path ? 'Back to path' : 'All labs'}
-          </Link>
+
+          <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end">
+            <div className="w-36">
+              <ProgressBar value={earned} max={LAB_MAX_POINTS} size="sm" label={`${earned} of ${LAB_MAX_POINTS} points`} showValue />
+            </div>
+            <Button as={Link} to={backTo} size="sm">
+              <Icon name="arrowLeft" size={13} />
+              {filters.path ? 'Back to path' : 'All labs'}
+            </Button>
+          </div>
         </div>
       </header>
 
-      <div role="tablist" aria-label="Lab sections" className="flex gap-1 overflow-x-auto border-b border-line">
-        {TABS.map(([key, label], tabIndex) => (
-          <button
-            key={key}
-            ref={(element) => { tabRefs.current[tabIndex] = element }}
-            type="button"
-            role="tab"
-            id={`tab-${key}`}
-            aria-selected={tab === key}
-            aria-controls={`panel-${key}`}
-            tabIndex={tab === key ? 0 : -1}
-            onClick={() => setTab(key)}
-            onKeyDown={(event) => onTabKey(event, tabIndex)}
-            className={`tab ${tab === key ? 'tab-active' : ''}`}
-          >
-            {label}
-            {key === 'fixit' && entry.fixit && <Icon name="check" size={13} className="text-emerald-600" />}
-          </button>
-        ))}
+      <div className="sticky top-14 z-20 -mx-4 border-b border-line bg-canvas/95 px-4 py-1.5 backdrop-blur sm:-mx-6 sm:px-6">
+        <Tabs tabs={TABS.map((item) => ({ ...item, done: item.value === 'fixit' && entry.fixit }))} value={tab} onChange={setTab} label="Lab sections" />
       </div>
 
-      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        <TabPanel tab={tab} module={module} entry={entry} backTo={backTo} />
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="min-w-0">
+        {tab === 'challenge' && <ChallengeTab module={module} entry={entry} runner={runner} />}
+        {tab === 'background' && <BackgroundTab module={module} backTo={backTo} />}
+        {tab === 'fixit' && (
+          <div className="space-y-4">
+            <div className="card p-5">
+              <h2 className="text-sm font-semibold text-fg">Fix the vulnerability, not the test</h2>
+              <p className="mt-1.5 max-w-reading text-sm leading-6 text-fg-muted">
+                The sandbox replays the original attack against your implementation and runs regression checks so a shortcut
+                that breaks legitimate input does not pass. Every check is deterministic and runs server-side.
+                {['Advanced', 'Expert'].includes(module.difficulty) && ' This level requires both the flag and a passing fix to count as complete.'}
+              </p>
+            </div>
+            <FixIt module={module} />
+          </div>
+        )}
+        {tab === 'code' && <CodeTab module={module} />}
+        {tab === 'guide' && (
+          GUIDES[module.id] ? (
+            <article className="card max-w-reading p-5 sm:p-6">
+              <Markdown source={GUIDES[module.id]} />
+            </article>
+          ) : (
+            <EmptyState icon="book" title="No guide compiled for this lab" body="The Challenge tab still contains the full brief, and the backend source is on the Code tab." />
+          )
+        )}
       </div>
 
       <LabSequence prev={prev} next={next} position={position} total={effective.length} linkFor={linkFor} />

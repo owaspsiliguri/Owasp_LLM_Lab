@@ -3,7 +3,7 @@ import { useModules } from '../hooks/useModules.js'
 import { useProgress } from '../hooks/useProgress.jsx'
 import { PATHS } from '../content/paths.js'
 import { riskOf } from '../services/labFilters.js'
-import { Badge, DifficultyBadge, EmptyState, Loading, PageHeader, ProgressBar } from '../components/ui.jsx'
+import { Badge, DifficultyBadge, EmptyState, Loading, PageHeader, ProgressBar } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
 export default function Paths() {
