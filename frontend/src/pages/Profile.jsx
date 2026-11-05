@@ -4,7 +4,7 @@ import { isAuthEnabled } from '../services/supabase.js'
 import { useModules } from '../hooks/useModules.js'
 import { summarize, useProgress } from '../hooks/useProgress.jsx'
 import { useToast } from '../components/Toast.jsx'
-import { Loading, PageHeader, ProgressBar, Stat } from '../components/ui.jsx'
+import { Loading, PageHeader, ProgressBar, Stat } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
 const MIN_PASSWORD = 8

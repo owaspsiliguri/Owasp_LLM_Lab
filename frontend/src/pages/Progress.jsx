@@ -5,7 +5,7 @@ import { labStatus, summarize, useProgress } from '../hooks/useProgress.jsx'
 import { riskOf } from '../services/labFilters.js'
 import { LAB_MAX_POINTS, labPoints } from '../services/points.js'
 import { useToast } from '../components/Toast.jsx'
-import { Badge, EmptyState, Loading, PageHeader, ProgressBar, Stat } from '../components/ui.jsx'
+import { Badge, EmptyState, Loading, PageHeader, ProgressBar, Stat } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
 const STATUS = {

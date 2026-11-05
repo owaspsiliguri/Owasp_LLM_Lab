@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api.js'
-import { EmptyState, Loading, PageHeader } from '../components/ui.jsx'
+import { EmptyState, Loading, PageHeader } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
 function PodiumCard({ entry, me }) {

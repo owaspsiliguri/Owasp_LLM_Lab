@@ -4,7 +4,7 @@ import { useModules } from '../hooks/useModules.js'
 import { labStatus, useProgress } from '../hooks/useProgress.jsx'
 import { DIFFICULTIES, STATUS_FILTERS, filterModules, filterQuery, riskOf, risksIn } from '../services/labFilters.js'
 import { LAB_MAX_POINTS, labPoints } from '../services/points.js'
-import { Badge, DifficultyBadge, EmptyState, Loading, PageHeader, ProgressBar } from '../components/ui.jsx'
+import { Badge, DifficultyBadge, EmptyState, Loading, PageHeader, ProgressBar } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
 const STATUS_BADGE = {

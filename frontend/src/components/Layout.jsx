@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useModules } from '../hooks/useModules.js'
+import { useTheme } from '../hooks/useTheme.jsx'
 import { isAuthEnabled } from '../services/supabase.js'
+import Button from './ui/Button.jsx'
 import Icon from './Icons.jsx'
 
 const NAV_GROUPS = [
@@ -33,6 +35,8 @@ const CRUMB_LABELS = {
   profile: 'Profile', admin: 'Admin console', about: 'About', contribute: 'Contribute',
 }
 
+const SIDEBAR_KEY = 'lll.sidebar'
+
 function initials(name) {
   const parts = String(name || '?').trim().split(/\s+/).filter(Boolean)
   return ((parts[0]?.[0] || '?') + (parts[1]?.[0] || '')).toUpperCase()
@@ -41,14 +45,16 @@ function initials(name) {
 function Logo({ compact = false }) {
   return (
     <span className="flex items-center gap-2.5">
-      <span className="logo grid h-9 w-9 place-items-center rounded-lg border border-brand-500/40 bg-brand-500/10 text-[13px] font-bold">
-        <span className="neon">&gt;_</span>
+      <span className="logo grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-accent-line bg-accent-tint text-xs font-bold text-accent-text" aria-hidden>
+        &gt;_
       </span>
-      <span className="leading-tight">
-        <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-fog-500">OWASP</span>
-        <span className="block font-mono text-sm font-semibold text-fog-100">LLM Lab</span>
-      </span>
-      {!compact && <span className="sr-only">OWASP LLM Lab home</span>}
+      {!compact && (
+        <span className="leading-tight">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">OWASP</span>
+          <span className="block font-mono text-sm font-semibold text-fg">LLM Lab</span>
+        </span>
+      )}
+      <span className="sr-only">OWASP LLM Lab home</span>
     </span>
   )
 }
@@ -58,15 +64,11 @@ function useCrumbs(modules) {
   return useMemo(() => {
     const segments = pathname.split('/').filter(Boolean)
     if (!segments.length) return [{ label: 'Home' }]
-    const crumbs = [{ label: 'Home', to: '/' }]
     if (segments[0] === 'labs' && segments[1]) {
       const lab = modules.find((module) => module.id === segments[1])
-      crumbs.push({ label: 'Labs', to: '/labs' })
-      crumbs.push({ label: lab ? lab.name : 'Lab' })
-      return crumbs
+      return [{ label: 'Home', to: '/' }, { label: 'Labs', to: '/labs' }, { label: lab ? lab.name : 'Lab' }]
     }
-    crumbs.push({ label: CRUMB_LABELS[segments[0]] || 'Page' })
-    return crumbs
+    return [{ label: 'Home', to: '/' }, { label: CRUMB_LABELS[segments[0]] || 'Page' }]
   }, [pathname, modules])
 }
 
@@ -75,16 +77,16 @@ function Breadcrumbs() {
   const crumbs = useCrumbs(modules)
   return (
     <nav aria-label="Breadcrumb" className="hidden min-w-0 sm:block">
-      <ol className="flex min-w-0 items-center gap-1 text-sm">
+      <ol className="flex min-w-0 items-center gap-1 text-xs">
         {crumbs.map((crumb, index) => {
           const last = index === crumbs.length - 1
           return (
             <li key={`${crumb.label}-${index}`} className="flex min-w-0 items-center gap-1">
-              {index > 0 && <Icon name="chevronRight" size={14} className="shrink-0 text-slate-300" />}
+              {index > 0 && <Icon name="chevronRight" size={13} className="shrink-0 text-fg-subtle" />}
               {last || !crumb.to ? (
-                <span aria-current={last ? 'page' : undefined} className="truncate font-medium text-ink">{crumb.label}</span>
+                <span aria-current={last ? 'page' : undefined} className="truncate font-medium text-fg">{crumb.label}</span>
               ) : (
-                <Link to={crumb.to} className="shrink-0 text-slate-500 hover:text-ink">{crumb.label}</Link>
+                <Link to={crumb.to} className="shrink-0 rounded text-fg-muted transition-colors hover:text-fg">{crumb.label}</Link>
               )}
             </li>
           )
@@ -94,23 +96,101 @@ function Breadcrumbs() {
   )
 }
 
-function SidebarContent({ nav, authed, admin, profile, session, onNavigate, signOut }) {
+function ThemeToggle({ className = '' }) {
+  const { theme, toggle } = useTheme()
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className={`grid h-8 w-8 place-items-center rounded-md text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg ${className}`}
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+    >
+      <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={17} />
+    </button>
+  )
+}
+
+function AccountMenu({ name, admin, signOut }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return undefined
+    const onClick = (event) => { if (!ref.current?.contains(event.target)) setOpen(false) }
+    const onKey = (event) => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Account menu"
+        className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-surface-2"
+      >
+        <span className="grid h-8 w-8 place-items-center rounded-full border border-accent-line bg-accent-tint text-xs font-semibold text-accent-text">
+          {initials(name)}
+        </span>
+        <span className="hidden max-w-[9rem] truncate text-sm text-fg-muted md:inline">{name}</span>
+        <Icon name="chevronDown" size={14} className="hidden text-fg-subtle md:block" />
+      </button>
+
+      {open && (
+        <div role="menu" className="absolute right-0 z-40 mt-1.5 w-56 animate-pop-in rounded-lg border border-line-strong bg-surface p-1 shadow-drawer">
+          <div className="border-b border-line px-3 py-2">
+            <p className="truncate text-sm font-medium text-fg">{name || 'Signed in'}</p>
+            <p className="text-xs text-fg-subtle">{admin ? 'Administrator' : 'Learner'}</p>
+          </div>
+          <Link role="menuitem" to="/profile" onClick={() => setOpen(false)} className="sidebar-link mt-1">
+            <Icon name="user" size={16} /> Profile and settings
+          </Link>
+          {admin && (
+            <Link role="menuitem" to="/admin" onClick={() => setOpen(false)} className="sidebar-link">
+              <Icon name="admin" size={16} /> Admin console
+            </Link>
+          )}
+          <button
+            role="menuitem"
+            type="button"
+            onClick={() => { setOpen(false); signOut() }}
+            className="sidebar-link w-full"
+          >
+            <Icon name="logout" size={16} /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SidebarContent({ nav, authed, admin, profile, session, onNavigate, signOut, collapsed, compact }) {
   const name = profile?.full_name || session?.user?.email || ''
   return (
-    <div className="flex h-full flex-col bg-ink-950">
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5">
-        <Link to="/" onClick={onNavigate} className="rounded focus-visible:outline-white"><Logo /></Link>
-        {onNavigate && (
-          <button type="button" data-autofocus onClick={onNavigate} className="rounded-lg p-2 text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Close navigation">
-            <Icon name="close" size={20} />
+    <div className="flex h-full flex-col bg-surface">
+      <div className={`flex h-14 shrink-0 items-center gap-2 border-b border-line ${collapsed && !compact ? 'justify-center px-2' : 'justify-between px-4'}`}>
+        <Link to="/" onClick={onNavigate} className="rounded"><Logo compact={collapsed && !compact} /></Link>
+        {compact && (
+          <button type="button" data-autofocus onClick={onNavigate} className="rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg" aria-label="Close navigation">
+            <Icon name="close" size={18} />
           </button>
         )}
       </div>
 
-      <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 py-5">
+      <nav aria-label="Main" className={`flex-1 overflow-y-auto py-3 ${collapsed && !compact ? 'px-1.5' : 'px-2.5'}`}>
         {nav.map((group) => (
-          <div key={group.label} className="mb-6 last:mb-0">
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{group.label}</p>
+          <div key={group.label} className="mb-5 last:mb-0">
+            {!(collapsed && !compact) && (
+              <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-subtle">{group.label}</p>
+            )}
             <ul className="space-y-0.5">
               {group.items.map((item) => (
                 <li key={item.to}>
@@ -118,10 +198,12 @@ function SidebarContent({ nav, authed, admin, profile, session, onNavigate, sign
                     to={item.to}
                     end={item.end}
                     onClick={onNavigate}
-                    className={({ isActive }) => `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
+                    title={collapsed && !compact ? item.label : undefined}
+                    aria-label={collapsed && !compact ? item.label : undefined}
+                    className={({ isActive }) => `sidebar-link ${isActive ? 'sidebar-link-active' : ''} ${collapsed && !compact ? 'justify-center px-0' : ''}`}
                   >
-                    <Icon name={item.icon} size={17} className="shrink-0 opacity-80" />
-                    <span className="truncate">{item.label}</span>
+                    <Icon name={item.icon} size={17} className="shrink-0" />
+                    {!(collapsed && !compact) && <span className="truncate">{item.label}</span>}
                   </NavLink>
                 </li>
               ))}
@@ -130,37 +212,58 @@ function SidebarContent({ nav, authed, admin, profile, session, onNavigate, sign
         ))}
       </nav>
 
-      <div className="shrink-0 border-t border-white/10 p-3">
+      <div className="shrink-0 border-t border-line p-2.5">
         {authed ? (
           <>
-            <Link to="/profile" onClick={onNavigate} className="flex items-center gap-3 rounded-lg p-2 hover:bg-white/[0.06]">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/15 bg-white/10 text-xs font-semibold text-white">
+            <Link
+              to="/profile"
+              onClick={onNavigate}
+              title={collapsed && !compact ? name : undefined}
+              className={`flex items-center gap-2.5 rounded-md p-1.5 transition-colors hover:bg-surface-2 ${collapsed && !compact ? 'justify-center' : ''}`}
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-accent-line bg-accent-tint text-xs font-semibold text-accent-text">
                 {initials(name)}
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-white">{name}</span>
-                <span className="block text-[11px] text-slate-400">{admin ? 'Administrator' : 'Learner'}</span>
-              </span>
+              {!(collapsed && !compact) && (
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-fg">{name}</span>
+                  <span className="block text-xs text-fg-subtle">{admin ? 'Administrator' : 'Learner'}</span>
+                </span>
+              )}
             </Link>
-            <button type="button" onClick={signOut} className="mt-1 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/[0.06] hover:text-white">
-              <Icon name="logout" size={16} />
-              Sign out
+            <button
+              type="button"
+              onClick={signOut}
+              title={collapsed && !compact ? 'Sign out' : undefined}
+              aria-label={collapsed && !compact ? 'Sign out' : undefined}
+              className={`sidebar-link mt-0.5 w-full ${collapsed && !compact ? 'justify-center px-0' : ''}`}
+            >
+              <Icon name="logout" size={16} className="shrink-0" />
+              {!(collapsed && !compact) && 'Sign out'}
             </button>
           </>
         ) : isAuthEnabled() ? (
-          <div className="space-y-2 px-1 pb-1">
-            <Link to="/signup" onClick={onNavigate} className="btn btn-primary w-full">Create account</Link>
-            <Link to="/login" onClick={onNavigate} className="btn w-full border-ink-700 bg-ink-900 text-fog-100 hover:bg-ink-800">Sign in</Link>
+          <div className={`space-y-2 ${collapsed && !compact ? 'px-0.5' : 'px-0.5'}`}>
+            <Button as={Link} to="/signup" onClick={onNavigate} variant="primary" className="w-full">
+              {collapsed && !compact ? '＋' : 'Create account'}
+            </Button>
+            {!(collapsed && !compact) && (
+              <Button as={Link} to="/login" onClick={onNavigate} className="w-full">Sign in</Button>
+            )}
           </div>
         ) : (
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-            <p className="flex items-center gap-2 text-xs font-medium text-slate-200"><Icon name="info" size={14} /> Local training mode</p>
-            <p className="mt-1 text-[11px] leading-4 text-slate-400">Progress stays in this browser. Connect Supabase to add accounts and cloud progress.</p>
-          </div>
+          !(collapsed && !compact) && (
+            <div className="rounded-md border border-line bg-surface-2 p-2.5">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-fg"><Icon name="info" size={13} /> Local training mode</p>
+              <p className="mt-1 text-[11px] leading-4 text-fg-muted">Progress stays in this browser. Connect Supabase to add accounts.</p>
+            </div>
+          )
         )}
-        <p className="mt-3 px-1 text-[10px] leading-4 text-slate-500">
-          Deliberately vulnerable range. Use only on systems you own or are authorised to test.
-        </p>
+        {!(collapsed && !compact) && (
+          <p className="mt-2 px-1 text-[10px] leading-4 text-fg-subtle">
+            Deliberately vulnerable. Authorised use only.
+          </p>
+        )}
       </div>
     </div>
   )
@@ -170,6 +273,9 @@ export default function Layout() {
   const { session, profile, signOut } = useAuth()
   const location = useLocation()
   const [open, setOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_KEY) === 'collapsed' } catch { return false }
+  })
   const panelRef = useRef(null)
   const triggerRef = useRef(null)
 
@@ -179,16 +285,16 @@ export default function Layout() {
 
   const nav = useMemo(() => NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.map((item) => (
-      item.to === '/' ? { ...item, label: authed ? 'Dashboard' : 'Home' } : item
-    )),
+    items: group.items.map((item) => (item.to === '/' ? { ...item, label: authed ? 'Dashboard' : 'Home' } : item)),
   })).concat(admin ? [{ label: 'Operations', items: [{ to: '/admin', label: 'Admin console', icon: 'admin' }] }] : []), [authed, admin])
 
   const close = useCallback(() => setOpen(false), [])
 
   useEffect(() => { setOpen(false) }, [location.pathname])
-
   useEffect(() => { window.scrollTo(0, 0) }, [location.pathname])
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_KEY, collapsed ? 'collapsed' : 'expanded') } catch { /* private mode */ }
+  }, [collapsed])
 
   useEffect(() => {
     if (!open) return undefined
@@ -206,23 +312,14 @@ export default function Layout() {
     })
 
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        close()
-        return
-      }
+      if (event.key === 'Escape') { event.preventDefault(); close(); return }
       if (event.key !== 'Tab') return
       const elements = focusable()
       if (!elements.length) return
       const first = elements[0]
       const last = elements[elements.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
     }
 
     document.addEventListener('keydown', onKeyDown)
@@ -237,57 +334,59 @@ export default function Layout() {
 
   return (
     <>
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[90] focus:rounded-lg focus:bg-ink-950 focus:px-3 focus:py-2 focus:text-sm focus:text-ink focus:shadow-card">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[90] focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:text-fg focus:shadow-card">
         Skip to content
       </a>
 
-      <div className="min-h-screen lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
-        <aside className="sticky top-0 hidden h-screen border-r border-ink-700 lg:block">
+      <div className={`min-h-screen lg:grid ${collapsed ? 'lg:grid-cols-[64px_minmax(0,1fr)]' : 'lg:grid-cols-[248px_minmax(0,1fr)]'}`}>
+        <aside className="sticky top-0 hidden h-screen border-r border-line lg:block">
           <SidebarContent
             nav={nav} authed={authed} admin={admin} profile={profile} session={session}
-            signOut={signOut}
+            signOut={signOut} collapsed={collapsed}
           />
         </aside>
 
         <div className="flex min-h-screen min-w-0 flex-col">
-          <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-950/95 backdrop-blur">
-            <div className="flex h-16 items-center gap-2 px-4 sm:gap-4 sm:px-6 lg:px-8">
+          <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+            <div className="flex h-14 items-center gap-2 px-4 sm:gap-3 sm:px-6">
               <button
                 ref={triggerRef}
                 type="button"
-                className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-ink lg:hidden"
+                className="rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg lg:hidden"
                 aria-label={open ? 'Close navigation' : 'Open navigation'}
                 aria-expanded={open}
                 aria-controls="mobile-navigation"
                 onClick={() => setOpen((value) => !value)}
               >
-                <Icon name={open ? 'close' : 'menu'} size={22} />
+                <Icon name={open ? 'close' : 'menu'} size={20} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCollapsed((value) => !value)}
+                className="hidden rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg lg:inline-flex"
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                aria-pressed={collapsed}
+              >
+                <Icon name="sidebar" size={18} />
               </button>
 
               <Link to="/" className="flex items-center gap-1.5 lg:hidden" aria-label="OWASP LLM Lab home">
-                <span className="logo neon text-lg font-bold">&gt;_</span>
-                <span className="font-mono text-sm font-semibold text-ink">LLM Lab</span>
+                <span className="logo text-base font-bold text-accent-text">&gt;_</span>
+                <span className="font-mono text-sm font-semibold text-fg">LLM Lab</span>
               </Link>
 
               <Breadcrumbs />
 
-              <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+              <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
+                <ThemeToggle />
                 {authed ? (
-                  <>
-                    <Link to="/profile" className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-slate-100" title={session.user.email}>
-                      <span className="grid h-8 w-8 place-items-center rounded-full border border-ink-600 bg-ink-800 text-xs font-semibold text-brand-400">{initials(name)}</span>
-                      <span className="hidden max-w-[10rem] truncate text-sm text-slate-600 md:inline">{name}</span>
-                    </Link>
-                    <button type="button" onClick={signOut} className="btn btn-sm btn-ghost" aria-label="Sign out">
-                      <Icon name="logout" size={16} />
-                      <span className="hidden sm:inline">Sign out</span>
-                    </button>
-                  </>
+                  <AccountMenu name={name} admin={admin} signOut={signOut} />
                 ) : isAuthEnabled() ? (
                   <>
-                    <Link to="/login" className="btn btn-sm btn-ghost sm:hidden">Sign in</Link>
-                    <Link to="/signup" className="btn btn-sm hidden sm:inline-flex">Create account</Link>
-                    <Link to="/login" className="btn btn-sm btn-primary hidden sm:inline-flex">Sign in</Link>
+                    <Button as={Link} to="/login" size="sm" variant="ghost" className="sm:hidden">Sign in</Button>
+                    <Button as={Link} to="/signup" size="sm" className="hidden sm:inline-flex">Create account</Button>
+                    <Button as={Link} to="/login" size="sm" variant="primary" className="hidden sm:inline-flex">Sign in</Button>
                   </>
                 ) : (
                   <span className="badge badge-neutral"><Icon name="lock" size={12} /> Local mode</span>
@@ -296,13 +395,16 @@ export default function Layout() {
             </div>
           </header>
 
-          <main id="main" key={location.pathname} className="page-enter mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+          <main id="main" key={location.pathname} className="page-enter mx-auto w-full max-w-content flex-1 px-4 py-6 sm:px-6 sm:py-8">
             <Outlet />
           </main>
 
-          <footer className="mx-auto w-full max-w-[1440px] border-t border-line px-4 py-6 text-xs leading-5 text-slate-500 sm:px-6 lg:px-8">
-            <p>Deliberately vulnerable training application. Run it locally or on your own deployment, and never point these techniques at systems you do not own or have permission to test.</p>
-            <p className="mt-1">Proposed by OWASP Siliguri and built by the community. Not an official OWASP project.</p>
+          <footer className="mx-auto w-full max-w-content border-t border-line px-4 py-5 text-xs leading-5 text-fg-subtle sm:px-6">
+            <p className="max-w-3xl">
+              Deliberately vulnerable training application. Run it locally or on your own deployment, and never point
+              these techniques at systems you do not own or have permission to test.
+            </p>
+            <p className="mt-1.5">Proposed by OWASP Siliguri and built by the community. Not an official OWASP project.</p>
           </footer>
         </div>
       </div>
@@ -313,7 +415,7 @@ export default function Layout() {
             type="button"
             tabIndex={-1}
             aria-label="Close navigation"
-            className="absolute inset-0 h-full w-full cursor-default bg-black/70"
+            className="absolute inset-0 h-full w-full cursor-default bg-black/60"
             onClick={close}
           />
           <div
@@ -322,12 +424,11 @@ export default function Layout() {
             role="dialog"
             aria-modal="true"
             aria-label="Navigation"
-            className="absolute inset-y-0 left-0 w-[min(19rem,86vw)] animate-slide-in shadow-drawer"
+            className="absolute inset-y-0 left-0 w-[min(17rem,86vw)] animate-slide-in border-r border-line shadow-drawer"
           >
             <SidebarContent
               nav={nav} authed={authed} admin={admin} profile={profile} session={session}
-              onNavigate={close}
-              signOut={() => { close(); signOut() }}
+              onNavigate={close} signOut={() => { close(); signOut() }} compact
             />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { PageHeader } from '../components/ui.jsx'
+import { PageHeader } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
 const STEPS = [

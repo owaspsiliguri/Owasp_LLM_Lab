@@ -1,8 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useModules } from '../hooks/useModules.js'
 import { supabase } from '../services/supabase.js'
-import { Badge, EmptyState, Loading, PageHeader, ProgressBar, Stat } from '../components/ui.jsx'
+import { Badge, Button, EmptyState, Loading, PageHeader, ProgressBar, Stat, Table } from '../components/ui'
 import Icon from '../components/Icons.jsx'
+
+const SORTS = {
+  email: (a, b) => (a.email || '').localeCompare(b.email || ''),
+  created_at: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')),
+  explored: (a, b) => a.explored - b.explored,
+  flags: (a, b) => a.flags - b.flags,
+  fixes: (a, b) => a.fixes - b.fixes,
+  percent: (a, b) => a.percent - b.percent,
+}
+
+function toCsv(rows) {
+  const header = ['email', 'full_name', 'joined', 'explored', 'flags', 'fixes', 'percent']
+  const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
+  return [header.join(','), ...rows.map((row) => [
+    row.email, row.full_name || '', row.created_at || '', row.explored, row.flags, row.fixes, row.percent,
+  ].map(escape).join(','))].join('\n')
+}
 
 function percentOf(row, total) {
   if (!total) return 0
@@ -24,6 +41,7 @@ export default function Admin() {
   const total = modules.length
   const [state, setState] = useState({ loading: true, error: null, profiles: [], progress: [], attempts: [], attemptCount: 0 })
   const [query, setQuery] = useState('')
+  const [sort, setSort] = useState({ key: 'percent', dir: 'desc' })
 
   const load = useCallback(async () => {
     const sb = supabase()
@@ -61,6 +79,7 @@ export default function Admin() {
       perUser.set(row.user_id, aggregate)
     }
     const needle = query.trim().toLowerCase()
+    const compare = SORTS[sort.key] || SORTS.percent
     return state.profiles
       .filter((profile) => profile.role === 'student')
       .filter((profile) => !needle || (profile.email || '').toLowerCase().includes(needle) || (profile.full_name || '').toLowerCase().includes(needle))
@@ -68,8 +87,22 @@ export default function Admin() {
         const aggregate = perUser.get(profile.id) || { explored: 0, flags: 0, fixes: 0 }
         return { ...profile, ...aggregate, percent: percentOf(aggregate, total) }
       })
-      .sort((a, b) => b.percent - a.percent || (a.email || '').localeCompare(b.email || ''))
-  }, [state, query, total])
+      .sort((a, b) => (sort.dir === 'asc' ? compare(a, b) : compare(b, a)) || (a.email || '').localeCompare(b.email || ''))
+  }, [state, query, total, sort])
+
+  function toggleSort(key) {
+    setSort((current) => ({ key, dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc' }))
+  }
+
+  function exportCsv() {
+    const blob = new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `llm-lab-students-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   const stats = useMemo(() => ({
     students: state.profiles.filter((profile) => profile.role === 'student').length,
@@ -125,7 +158,13 @@ export default function Admin() {
             <h2 id="students-heading" className="text-lg font-semibold text-ink">Students</h2>
             <p className="text-sm text-slate-500">{rows.length} {rows.length === 1 ? 'account' : 'accounts'}{query ? ` matching “${query}”` : ''}.</p>
           </div>
-          <span className="hidden text-xs text-slate-500 sm:block">{total} labs in the catalogue</span>
+          <div className="flex items-center gap-2">
+            <span className="hidden text-xs text-slate-500 sm:block">{total} labs in the catalogue</span>
+            <Button size="sm" onClick={exportCsv} disabled={rows.length === 0}>
+              <Icon name="download" size={13} />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
         {rows.length === 0 ? (
@@ -137,40 +176,59 @@ export default function Admin() {
         ) : (
           <>
             <div className="card hidden overflow-hidden md:block">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[52rem] text-left text-sm">
-                  <thead className="border-b border-line bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th scope="col" className="px-4 py-2.5 font-medium">Student</th>
-                      <th scope="col" className="px-4 py-2.5 font-medium">Joined</th>
-                      <th scope="col" className="px-4 py-2.5 font-medium">Explored</th>
-                      <th scope="col" className="px-4 py-2.5 font-medium">Flags</th>
-                      <th scope="col" className="px-4 py-2.5 font-medium">Fixes</th>
-                      <th scope="col" className="px-4 py-2.5 font-medium">Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {rows.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/70">
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-ink">{row.email}</p>
-                          {row.full_name && <p className="text-xs text-slate-500">{row.full_name}</p>}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">{formatDate(row.created_at)}</td>
-                        <td className="px-4 py-3 text-slate-600">{row.explored}/{total}</td>
-                        <td className="px-4 py-3 text-slate-600">{row.flags}/{total}</td>
-                        <td className="px-4 py-3 text-slate-600">{row.fixes}/{total}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <ProgressBar value={row.percent} size="sm" className="w-28" label={`${row.email} progress`} />
-                            <span className="text-xs text-slate-500">{row.percent}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table
+                caption="Students and their progress"
+                minWidth="52rem"
+                rows={rows}
+                rowKey={(row) => row.id}
+                columns={[
+                  {
+                    key: 'email',
+                    header: 'Student',
+                    sortable: true,
+                    sorted: sort.key === 'email' ? sort.dir : undefined,
+                    onSort: () => toggleSort('email'),
+                    render: (row) => (
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-fg">{row.email}</p>
+                        {row.full_name && <p className="truncate text-xs text-fg-subtle">{row.full_name}</p>}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'created_at',
+                    header: 'Joined',
+                    sortable: true,
+                    sorted: sort.key === 'created_at' ? sort.dir : undefined,
+                    onSort: () => toggleSort('created_at'),
+                    render: (row) => <span className="whitespace-nowrap text-xs">{formatDate(row.created_at)}</span>,
+                  },
+                  ...['explored', 'flags', 'fixes'].map((key) => ({
+                    key,
+                    header: key === 'explored' ? 'Explored' : key === 'flags' ? 'Flags' : 'Fixes',
+                    align: 'right',
+                    sortable: true,
+                    sorted: sort.key === key ? sort.dir : undefined,
+                    onSort: () => toggleSort(key),
+                    render: (row) => <span className="tabular-nums">{row[key]}/{total}</span>,
+                  })),
+                  {
+                    key: 'percent',
+                    header: 'Progress',
+                    align: 'right',
+                    sortable: true,
+                    sorted: sort.key === 'percent' ? sort.dir : undefined,
+                    onSort: () => toggleSort('percent'),
+                    className: 'w-44',
+                    render: (row) => (
+                      <div className="flex items-center justify-end gap-2">
+                        <ProgressBar value={row.percent} size="sm" className="w-24" />
+                        <span className="w-9 text-right text-xs tabular-nums text-fg-muted">{row.percent}%</span>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
             </div>
 
             <ul className="space-y-2 md:hidden">

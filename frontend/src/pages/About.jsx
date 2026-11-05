@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useModules } from '../hooks/useModules.js'
 import { risksIn } from '../services/labFilters.js'
-import { PageHeader } from '../components/ui.jsx'
+import { PageHeader } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
 const PRINCIPLES = [
