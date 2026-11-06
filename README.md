@@ -121,7 +121,7 @@ Everything has a free tier and the guide assumes zero deployment experience:
 
 **[docs/Deployment_Guide.md](docs/Deployment_Guide.md)** — step by step:
 
-1. **Supabase** — create the project, run [`supabase/schema.sql`](supabase/schema.sql) (tables, row level security, the `owaspsiliguri@gmail.com` admin trigger), copy your keys
+1. **Supabase** — create the project, run [`supabase/schema.sql`](supabase/schema.sql) (tables, row level, copy your keys
 2. **Render** — deploy the FastAPI backend (`backend/`, root directory + start command provided), set the Supabase env vars
 3. **Vercel** — deploy the React frontend (`frontend/` root directory), set `VITE_*` env vars
 4. **Connect** — set `CORS_ORIGINS` on Render to your Vercel URL
