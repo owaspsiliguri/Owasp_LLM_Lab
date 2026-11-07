@@ -161,7 +161,7 @@ export default function Labs() {
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex flex-wrap items-center gap-2">
                     <DifficultyBadge level={module.difficulty} />
-                    <Badge>{riskOf(module).code}</Badge>
+                    <Badge>{riskOf(module).name}</Badge>
                     <span className={`badge ml-auto ${statusClass}`}>{statusLabel}</span>
                   </div>
 
