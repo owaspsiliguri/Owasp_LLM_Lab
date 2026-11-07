@@ -109,7 +109,7 @@ class DataPoisoning(VulnerabilityModule):
     id = ID
     fixit_key = "llm03"
     name = "Training Data and Knowledge Base Poisoning"
-    category = "LLM04:2025 Data and Model Poisoning"
+    category = "LLM03:2025 Data and Model Poisoning"
     owasp_id = "LLM03"
     difficulty = "Intermediate"
     estimated_minutes = 35
