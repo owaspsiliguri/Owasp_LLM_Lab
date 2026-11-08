@@ -86,7 +86,8 @@ describe('navigation and dashboard', () => {
   it('shows a clear error when the backend is unreachable', async () => {
     globalThis.fetch = vi.fn(async () => { throw new Error('network down') })
     renderAt('/labs')
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Could not reach the backend/)
+    // GETs retry with exponential backoff before the error state is shown.
+    expect(await screen.findByRole('alert', {}, { timeout: 8000 })).toHaveTextContent(/Could not reach the backend/)
   })
 })
 

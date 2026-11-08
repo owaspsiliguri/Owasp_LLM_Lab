@@ -7,10 +7,10 @@ import { Badge, DifficultyBadge, EmptyState, Loading, PageHeader, ProgressBar } 
 import Icon from '../components/Icons.jsx'
 
 export default function Paths() {
-  const { modules, loading, error, reload } = useModules()
+  const { modules, loading, error, errorKind, reload } = useModules()
   const { modules: progress } = useProgress()
 
-  if (loading || error) return <Loading error={error} onRetry={reload} />
+  if (loading || error) return <Loading error={error} errorKind={errorKind} onRetry={reload} />
 
   const byId = new Map(modules.map((module) => [module.id, module]))
   const done = (id) => Boolean(progress[id]?.flag && progress[id]?.fixit)

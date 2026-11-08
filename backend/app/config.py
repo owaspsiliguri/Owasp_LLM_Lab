@@ -34,12 +34,30 @@ class Settings:
     llm_timeout_seconds: int
 
 
+# The deployed frontend (Render static site). Always allowed so a production
+# deployment keeps working even when CORS_ORIGINS is unset or still holds the
+# placeholder from render.yaml. CORS_ORIGINS adds further origins.
+DEPLOYED_FRONTEND_ORIGINS = ("https://owasp-llm-lab-web.onrender.com",)
+LOCAL_DEVELOPMENT_ORIGINS = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+)
+
+
+def _cors_origins() -> tuple[str, ...]:
+    raw = os.environ.get("CORS_ORIGINS")
+    configured = tuple(o.strip().rstrip("/") for o in (raw or "").split(",") if o.strip())
+    # Deduplicate while preserving order: deployed origin first, then extras.
+    return tuple(dict.fromkeys((*DEPLOYED_FRONTEND_ORIGINS, *configured, *LOCAL_DEVELOPMENT_ORIGINS)))
+
+
 def get_settings() -> Settings:
-    origins = os.environ.get("CORS_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080")
     return Settings(
         chroma_url=os.environ.get("CHROMA_URL", "").rstrip("/"),
         data_dir=Path(os.environ.get("LAB_DATA_DIR", "/tmp/llm-lab-data")),  # noqa: S108  # nosec B108 - dev default; Docker sets /data
-        cors_origins=tuple(o.strip() for o in origins.split(",") if o.strip()),
+        cors_origins=_cors_origins(),
         rate_limit_per_minute=_int("RATE_LIMIT_PER_MINUTE", 120),
         flag_rate_limit_per_minute=_int("FLAG_RATE_LIMIT_PER_MINUTE", 20),
         fixit_timeout_seconds=_int("FIXIT_TIMEOUT_SECONDS", 8),

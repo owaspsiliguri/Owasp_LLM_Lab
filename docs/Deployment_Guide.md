@@ -112,7 +112,7 @@ Student's browser ──▶ Vercel (website)
    | `SUPABASE_SERVICE_ROLE_KEY` | the secret/service key from Part A.6 |
    | `SUPABASE_JWT_SECRET` | only if your project showed one; otherwise omit |
    | `LAB_SECRET` | any long random text, e.g. `my-lab-flags-never-change-9f3c…` (keeps flags stable across redeploys) |
-   | `CORS_ORIGINS` | `https://YOUR-APP.vercel.app` — a placeholder for now; fix it exactly in Part D |
+   | `CORS_ORIGINS` | `https://owasp-llm-lab-web.onrender.com` — your frontend origin; add a custom domain here too |
    | `RATE_LIMIT_PER_MINUTE` | `120` |
    | `GROQ_API_KEY` | *optional* — the lab's real LLM, from https://console.groq.com/keys |
    | `GEMINI_API_KEY` | *optional* — fallback real LLM, from https://aistudio.google.com/apikey |
@@ -137,7 +137,9 @@ Student's browser ──▶ Vercel (website)
    providers your keys unlocked.
 
    > Render free services **sleep** after ~15 minutes without traffic; the first request
-   > after that takes ~50 seconds. This is normal.
+   > after that takes ~50 seconds or more. This is normal. The frontend waits up to
+   > 120 seconds for that first response and shows "Waking up the backend. This may
+   > take up to a minute." while it waits.
 
 ---
 
@@ -170,11 +172,13 @@ Student's browser ──▶ Vercel (website)
 
 CORS tells the API which website may talk to it.
 
-1. Render → **owasp-llm-lab-api** → **Environment** → edit `CORS_ORIGINS` so it is
-   **exactly** your Vercel URL: `https://YOUR-APP.vercel.app`
-   - correct: `https://my-app.vercel.app`
-   - wrong: `https://my-app.vercel.app/` (no trailing slash), `my-app.vercel.app` (no scheme),
-     or a list with a space after the comma
+1. Render → **owasp-llm-lab-api** → **Environment** → edit `CORS_ORIGINS` so it includes
+   your frontend origin. The deployed Render static site is
+   `https://owasp-llm-lab-web.onrender.com`, and the backend allows that origin even
+   when this variable is unset. Add a custom domain or Vercel URL as a comma-separated extra:
+   - correct: `https://owasp-llm-lab-web.onrender.com`
+   - wrong: `https://owasp-llm-lab-web.onrender.com/` (no trailing slash), a bare hostname
+     (no scheme), or a list with a space after the comma
 2. **Save** — Render redeploys automatically.
 
 ---
@@ -238,6 +242,7 @@ service's current pricing page before a big course.
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Browser console: *blocked by CORS policy* | `CORS_ORIGINS` mismatch | Part D — exact origin, no trailing slash, save (redeploys) |
+| *Waking up the backend* then a timeout error | Render instance is still starting, or the free service is suspended after exhausting its monthly hours | Wait and retry once; if it never wakes, open the Render dashboard and check the service status |
 | Error `Sign in to run labs on this deployment.` (401) | Frontend built **without** `VITE_SUPABASE_*`, or backend missing `SUPABASE_URL`/`SUPABASE_JWT_SECRET` | Set the matching variables on **both** Vercel and Render, then redeploy both |
 | Error `Cannot verify your session: the auth service is unreachable` (503) | Backend cannot reach Supabase | Check `SUPABASE_URL` in Render; check Supabase status page |
 | *Invalid login credentials* on correct password | Account created before you disabled email confirmation | Finish the confirmation email, or disable confirmation and retry |

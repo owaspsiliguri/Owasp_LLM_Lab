@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import Icon from '../Icons.jsx'
 import Button from './Button.jsx'
 
@@ -5,18 +6,61 @@ export function Skeleton({ className = '', as: Tag = 'div' }) {
   return <Tag className={`skeleton ${className}`} aria-hidden />
 }
 
-export function Loading({ error, children, onRetry }) {
+/** A Render free instance can sleep; show this once a request is taking a while. */
+export function WakeNotice({ className = '', delay = 3000 }) {
+  const [visible, setVisible] = useState(delay === 0)
+
+  useEffect(() => {
+    if (delay === 0) return undefined
+    const timer = setTimeout(() => setVisible(true), delay)
+    return () => clearTimeout(timer)
+  }, [delay])
+
+  if (!visible) return null
+  return (
+    <p role="status" aria-live="polite" className={`flex items-start gap-2 text-xs leading-5 text-fg-muted ${className}`}>
+      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" aria-hidden />
+      Waking up the backend. This may take up to a minute.
+    </p>
+  )
+}
+
+const ERROR_HEADING = {
+  timeout: 'The backend is taking longer than expected',
+  unavailable: 'The backend is starting up',
+  network: 'Could not reach the backend',
+  database: 'The backend is running, but its database is unreachable',
+  http: 'The backend rejected the request',
+}
+
+function errorHint(kind) {
+  switch (kind) {
+    case 'timeout':
+    case 'unavailable':
+      return 'Render free instances sleep after inactivity. The first request can take up to a minute; try again once the service is awake.'
+    case 'network':
+      return 'No response reached the browser. Check your internet connection and try again.'
+    case 'database':
+      return 'The API is up, but its database connection failed. This is a server-side dependency issue, not your connection.'
+    default:
+      return import.meta.env.DEV
+        ? 'Check that the stack is running with docker compose up.'
+        : 'The request failed. Try again in a moment.'
+  }
+}
+
+export function Loading({ error, errorKind, children, onRetry }) {
   if (error) {
+    const message = error instanceof Error ? error.message : error
+    const kind = errorKind || (error instanceof Error ? error.kind : null)
     return (
       <div role="alert" className="card border-danger-line p-5">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 shrink-0 text-danger"><Icon name="alert" size={18} /></span>
           <div className="min-w-0">
-            <p className="font-medium text-fg">Could not reach the backend</p>
-            <p className="mt-1 text-sm leading-6 text-fg-muted">
-              {error}. Check that the stack is running with{' '}
-              <code className="rounded bg-surface-3 px-1 py-0.5 font-mono text-xs text-fg">docker compose up</code>.
-            </p>
+            <p className="font-medium text-fg">{ERROR_HEADING[kind] || ERROR_HEADING.http}</p>
+            <p className="mt-1 text-sm leading-6 text-fg-muted">{message}</p>
+            <p className="mt-1 text-xs leading-5 text-fg-subtle">{errorHint(kind)}</p>
             {onRetry && <Button size="sm" className="mt-3" onClick={onRetry}>Try again</Button>}
           </div>
         </div>
@@ -24,9 +68,12 @@ export function Loading({ error, children, onRetry }) {
     )
   }
   return (
-    <div className="flex items-center gap-3 py-8 text-sm text-fg-muted" role="status">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-line-strong border-t-accent" aria-hidden />
-      {children || 'Loading…'}
+    <div className="py-8" role="status">
+      <div className="flex items-center gap-3 text-sm text-fg-muted">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-line-strong border-t-accent" aria-hidden />
+        {children || 'Loading…'}
+      </div>
+      <WakeNotice className="mt-2" />
     </div>
   )
 }

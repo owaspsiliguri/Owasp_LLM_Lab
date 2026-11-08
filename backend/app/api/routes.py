@@ -66,13 +66,39 @@ def _get(module_id: str) -> VulnerabilityModule:
 
 @router.get("/health")
 async def health() -> dict[str, Any]:
+    """Liveness plus real dependency readiness.
+
+    Always returns 200 so Render's health check does not restart a process that
+    is running but has a temporarily unreachable dependency. The body reports
+    ``degraded`` and names the failing dependency instead of hiding it.
+    """
     chroma = await asyncio.to_thread(vectorstore.status)
+    database = await store.health()
     engines = {
         "groq": llm_clients.groq_available(),
         "gemini": llm_clients.gemini_available(),
         "judge": judge.judge_provider() or "off",
     }
-    return {"status": "ok", "modules": len(MODULES), "chroma": chroma, "engines": engines}
+    vector_ok = bool(chroma.get("reachable"))
+    database_ok = database["status"] in ("ok", "not_configured")
+    application_ok = bool(MODULES)
+    healthy = application_ok and vector_ok and database_ok
+    return {
+        "status": "ok" if healthy else "degraded",
+        "version": "1.0.0",
+        "modules": len(MODULES),
+        "checks": {
+            "application": {"status": "ok" if application_ok else "unavailable", "version": "1.0.0"},
+            "database": database,
+            "vector_store": {"status": "ok" if vector_ok else "unavailable", **chroma},
+            "llm": {
+                "status": "configured" if engines["groq"] or engines["gemini"] else "simulator",
+                "engines": engines,
+            },
+        },
+        "chroma": chroma,
+        "engines": engines,
+    }
 
 
 @router.get("/modules")

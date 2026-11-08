@@ -17,9 +17,11 @@ services:
       # chromadb==0.5.23 has no wheels for 3.13+, so pin the interpreter.
       - key: PYTHON_VERSION
         value: 3.12.7
-      # Frontend origin allowed to call this API (your Vercel URL, no trailing slash).
+      # Frontend origin allowed to call this API (the deployed Render static
+      # site, no trailing slash). Add a Vercel URL here if you also host there;
+      # the backend always also allows the deployed Render frontend.
       - key: CORS_ORIGINS
-        value: https://YOUR-APP.vercel.app
+        value: https://owasp-llm-lab-web.onrender.com
       # Keeps flags stable across redeploys (Render "Generate value" is fine too).
       - key: LAB_SECRET
         generateValue: true

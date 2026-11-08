@@ -27,12 +27,12 @@ function Status({ entry }) {
 }
 
 export default function Progress() {
-  const { modules, loading, error, reload } = useModules()
+  const { modules, loading, error, errorKind, reload } = useModules()
   const progress = useProgress()
   const toast = useToast()
   const [confirming, setConfirming] = useState(false)
 
-  if (loading || error) return <Loading error={error} onRetry={reload} />
+  if (loading || error) return <Loading error={error} errorKind={errorKind} onRetry={reload} />
 
   const summary = summarize(modules, progress)
   const hasProgress = Object.values(progress.modules).some((entry) => entry.explored || entry.flag || entry.fixit)

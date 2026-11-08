@@ -4,7 +4,7 @@ import { useModules } from '../hooks/useModules.js'
 import { labStatus, useProgress } from '../hooks/useProgress.jsx'
 import { DIFFICULTIES, STATUS_FILTERS, filterModules, filterQuery, riskOf, risksIn } from '../services/labFilters.js'
 import { LAB_MAX_POINTS, labPoints } from '../services/points.js'
-import { Badge, DifficultyBadge, EmptyState, Loading, PageHeader, ProgressBar } from '../components/ui'
+import { Badge, DifficultyBadge, EmptyState, Loading, PageHeader, ProgressBar, WakeNotice } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
 const STATUS_BADGE = {
@@ -28,7 +28,7 @@ function CardSkeleton() {
 }
 
 export default function Labs() {
-  const { modules, loading, error, reload } = useModules()
+  const { modules, loading, error, errorKind, reload } = useModules()
   const progress = useProgress()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -133,11 +133,14 @@ export default function Labs() {
       </section>
 
       {loading && !modules.length && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
-          {[0, 1, 2, 3, 4, 5].map((key) => <CardSkeleton key={key} />)}
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
+            {[0, 1, 2, 3, 4, 5].map((key) => <CardSkeleton key={key} />)}
+          </div>
+          <WakeNotice />
+        </>
       )}
-      {error && <Loading error={error} onRetry={reload} />}
+      {error && <Loading error={error} errorKind={errorKind} onRetry={reload} />}
 
       {!loading && !error && visible.length === 0 && (
         <EmptyState

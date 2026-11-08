@@ -38,7 +38,7 @@ export default function Leaderboard() {
     return () => { live = false }
   }, [])
 
-  if (error) return <Loading error={error.message} onRetry={() => window.location.reload()} />
+  if (error) return <Loading error={error.message} errorKind={error.kind} onRetry={() => window.location.reload()} />
   if (!data) return <Loading>Loading the ranking…</Loading>
 
   if (!data.enabled) {

@@ -5,7 +5,7 @@ import { useModules } from '../hooks/useModules.js'
 import { labStatus, summarize, useProgress } from '../hooks/useProgress.jsx'
 import { DIFFICULTIES, riskOf, risksIn } from '../services/labFilters.js'
 import { PATHS } from '../content/paths.js'
-import { Badge, Button, ProgressBar as Bar } from '../components/ui'
+import { Badge, Button, ProgressBar as Bar, WakeNotice } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
 const STEPS = [
@@ -79,7 +79,7 @@ function LabCard({ module, entry }) {
 }
 
 export default function Home() {
-  const { modules, loading, error, reload } = useModules()
+  const { modules, loading, error, errorKind, reload } = useModules()
   const stats = useStats()
   const progress = useProgress()
   const [level, setLevel] = useState('All')
@@ -219,9 +219,12 @@ export default function Home() {
             <LabCard key={module.id} module={module} entry={progress.modules[module.id] || {}} />
           ))}
         </div>
+        {loading && !modules.length && <WakeNotice className="mt-3" />}
         {error && (
           <p role="alert" className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-danger-line bg-danger-tint px-4 py-3 text-sm text-danger-text">
-            The lab catalogue could not be loaded ({error}).
+            {errorKind === 'timeout' || errorKind === 'unavailable'
+              ? 'The backend is still starting up'
+              : 'The lab catalogue could not be loaded'} ({error}).
             <button type="button" className="font-medium underline underline-offset-2" onClick={reload}>Try again</button>
           </p>
         )}

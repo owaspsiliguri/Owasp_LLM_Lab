@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { api } from '../services/api.js'
 
 const listeners = new Set()
-let state = { modules: [], loading: false, loaded: false, error: null }
+let state = { modules: [], loading: false, loaded: false, error: null, errorKind: null, errorStatus: null }
 let inflight = null
 
 function publish(next) {
@@ -19,14 +19,17 @@ const snapshot = () => state
 
 export function loadModules({ force = false } = {}) {
   if (inflight && !force) return inflight
-  publish({ loading: true, error: null })
+  publish({ loading: true, error: null, errorKind: null, errorStatus: null })
   inflight = api.modules()
     .then((modules) => {
-      publish({ modules, loading: false, loaded: true, error: null })
+      publish({ modules, loading: false, loaded: true, error: null, errorKind: null, errorStatus: null })
       return modules
     })
     .catch((error) => {
-      publish({ modules: [], loading: false, loaded: true, error: error.message })
+      publish({
+        modules: [], loading: false, loaded: true,
+        error: error.message, errorKind: error.kind || 'unknown', errorStatus: error.status || 0,
+      })
       throw error
     })
     .finally(() => { inflight = null })

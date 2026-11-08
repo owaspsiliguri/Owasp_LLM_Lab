@@ -32,10 +32,10 @@ function StatusBadge({ entry }) {
 
 export default function Dashboard() {
   const { profile, session } = useAuth()
-  const { modules, loading, error, reload } = useModules()
+  const { modules, loading, error, errorKind, reload } = useModules()
   const progress = useProgress()
 
-  if (loading || error) return <Loading error={error} onRetry={reload} />
+  if (loading || error) return <Loading error={error} errorKind={errorKind} onRetry={reload} />
 
   const summary = summarize(modules, progress)
   const recent = recentLabs(modules, progress, 4)

@@ -16,7 +16,7 @@ function initials(name) {
 
 export default function Profile() {
   const { session, profile, profileLoading, updateName, updatePassword, signOut } = useAuth()
-  const { modules, loading, error, reload } = useModules()
+  const { modules, loading, error, errorKind, reload } = useModules()
   const progress = useProgress()
   const toast = useToast()
   const authed = Boolean(isAuthEnabled() && session)
@@ -31,7 +31,7 @@ export default function Profile() {
 
   useEffect(() => { setName(profile?.full_name || '') }, [profile?.full_name])
 
-  if (loading || error) return <Loading error={error} onRetry={reload} />
+  if (loading || error) return <Loading error={error} errorKind={errorKind} onRetry={reload} />
 
   const summary = summarize(modules, progress)
   const email = session?.user?.email || 'Local browser session'

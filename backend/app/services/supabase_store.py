@@ -10,6 +10,7 @@ Supabase is unreachable or not configured at all.
 from __future__ import annotations
 
 import logging
+import time
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote
@@ -25,6 +26,36 @@ TIMEOUT = httpx.Timeout(5.0, connect=3.0)
 def configured() -> bool:
     s = get_settings()
     return bool(s.supabase_url and s.supabase_service_key)
+
+
+async def health() -> dict[str, Any]:
+    """Probe the database dependency for the health endpoint.
+
+    This is a real request to PostgREST (one row, one column), not a cached or
+    fabricated status. ``not_configured`` is distinct from a failed connection:
+    local mode intentionally runs without Supabase.
+    """
+    if not configured():
+        return {"status": "not_configured", "configured": False}
+    s = get_settings()
+    headers = {"apikey": s.supabase_service_key, "Authorization": f"Bearer {s.supabase_service_key}"}
+    started = time.perf_counter()
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            resp = await client.get(f"{s.supabase_url}/rest/v1/profiles?select=id&limit=1", headers=headers)
+    except httpx.HTTPError as exc:
+        log.warning("Supabase health check could not connect: %s", exc.__class__.__name__)
+        return {
+            "status": "unavailable",
+            "configured": True,
+            "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+            "error": exc.__class__.__name__,
+        }
+    latency_ms = round((time.perf_counter() - started) * 1000, 1)
+    if resp.status_code >= 400:
+        log.warning("Supabase health check returned %s", resp.status_code)
+        return {"status": "error", "configured": True, "http_status": resp.status_code, "latency_ms": latency_ms}
+    return {"status": "ok", "configured": True, "latency_ms": latency_ms}
 
 
 async def _post(path: str, payload: Any, prefer: str | None = None) -> bool:

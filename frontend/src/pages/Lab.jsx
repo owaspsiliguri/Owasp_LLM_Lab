@@ -378,7 +378,7 @@ function LabSequence({ prev, next, position, total, linkFor }) {
 export default function Lab() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
-  const { modules, loading: modulesLoading, error: modulesError, reload } = useModules()
+  const { modules, loading: modulesLoading, error: modulesError, errorKind: modulesErrorKind, reload } = useModules()
   const progress = useProgress()
   const progressRef = useRef(progress)
   progressRef.current = progress
@@ -437,7 +437,7 @@ export default function Lab() {
     return () => { document.title = previous }
   }, [detail])
 
-  if (modulesError) return <Loading error={modulesError} onRetry={reload} />
+  if (modulesError) return <Loading error={modulesError} errorKind={modulesErrorKind} onRetry={reload} />
   if (modulesLoading && !modules.length) return <Loading>Loading the lab catalogue…</Loading>
   if (!known) {
     return (
@@ -462,7 +462,7 @@ export default function Lab() {
     }
     return (
       <div className="space-y-3">
-        <Loading error={detailError.message} />
+        <Loading error={detailError.message} errorKind={detailError.kind} />
         <Button
           onClick={() => {
             setDetailError(null)
