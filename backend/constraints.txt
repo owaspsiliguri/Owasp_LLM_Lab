@@ -57,7 +57,7 @@ posthog==3.7.4
 propcache==0.5.4
 protobuf==7.36.2
 pydantic==2.10.4
-pydantic_core==2.27.2
+pydantic_core==2.50.4
 Pygments==2.21.0
 PyJWT==2.10.1
 PyPika==0.51.1
