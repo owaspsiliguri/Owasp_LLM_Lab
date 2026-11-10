@@ -16,7 +16,7 @@ chromadb==0.5.23
 click==8.5.0
 durationpy==0.11
 fastapi==0.142.2
-filelock==4.0.9
+filelock==4.2.9
 flatbuffers==25.12.19
 frozenlist==1.8.0
 fsspec==2026.9.0
