@@ -149,7 +149,10 @@ async def _provision_supabase_user(payload: dict[str, Any]) -> dict[str, Any]:
         raise HTTPException(status_code=502, detail="The authentication service returned an incomplete account.")
     metadata = user_data.get("user_metadata") or {}
     full_name = metadata.get("full_name") or metadata.get("name")
-    role = await supabase_store.profile_role(str(user_id))
+    try:
+        role = await supabase_store.profile_role(str(user_id))
+    except Exception:
+        role = "student"
     if role != "admin" and str(email).lower() == get_settings().admin_email:
         role = "admin"
     return db.upsert_provider_user(

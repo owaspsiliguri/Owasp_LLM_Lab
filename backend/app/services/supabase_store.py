@@ -434,6 +434,11 @@ async def profile(user_id: str) -> dict[str, Any] | None:
     }
 
 
+async def profile_role(user_id: str) -> str:
+    p = await profile(user_id)
+    return (p.get("role") if p else None) or "student"
+
+
 async def create_session(
     *,
     user_id: str,
