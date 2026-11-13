@@ -41,8 +41,22 @@ _cache: dict[str, tuple[float, dict[str, str]]] = {}
 
 # ── Configuration helpers ────────────────────────────────────────────────────
 
+def jwt_secret_value() -> str:
+    s = get_settings()
+    if s.jwt_secret:
+        return s.jwt_secret
+    if s.supabase_jwt_secret:
+        return s.supabase_jwt_secret
+    if s.supabase_service_key:
+        return hashlib.sha256(f"jwt-key:{s.supabase_service_key}".encode()).hexdigest()
+    if s.supabase_anon_key:
+        return hashlib.sha256(f"jwt-anon:{s.supabase_anon_key}".encode()).hexdigest()
+    seed = s.supabase_url or s.admin_email or "owasp-llm-lab-stable-secret"
+    return hashlib.sha256(f"jwt-seed:{seed}".encode()).hexdigest()
+
+
 def local_auth_configured() -> bool:
-    return bool(get_settings().jwt_secret)
+    return bool(get_settings().jwt_secret or get_settings().supabase_service_key)
 
 
 def supabase_auth_configured() -> bool:
@@ -73,8 +87,7 @@ def auth_mode() -> str:
 
 def create_access_token(user: dict[str, Any], session_id: str) -> str:
     settings = get_settings()
-    if not settings.jwt_secret:
-        raise RuntimeError("JWT_SECRET is not configured")
+    secret = jwt_secret_value()
     now = datetime.now(UTC)
     payload = {
         "sub": str(user["id"]),
@@ -88,14 +101,15 @@ def create_access_token(user: dict[str, Any], session_id: str) -> str:
         "iss": settings.auth_issuer,
         "aud": settings.auth_audience,
     }
-    return jwt.encode(payload, settings.jwt_secret, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, secret, algorithm=JWT_ALGORITHM)
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
     settings = get_settings()
+    secret = jwt_secret_value()
     return jwt.decode(
         token,
-        settings.jwt_secret,
+        secret,
         algorithms=[JWT_ALGORITHM],
         audience=settings.auth_audience,
         issuer=settings.auth_issuer,

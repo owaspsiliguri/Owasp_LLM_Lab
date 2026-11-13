@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 import AuthShell from '../components/AuthShell.jsx'
 import Icon from '../components/Icons.jsx'
+import { api } from '../services/api.js'
 
 function destinationFrom(state) {
   const from = state && typeof state.from === 'string' ? state.from : '/'
@@ -18,6 +19,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [warming, setWarming] = useState(false)
 
   const redirectTo = destinationFrom(location.state)
   if (enabled && !loading && user) return <Navigate to={redirectTo} replace />
@@ -37,11 +39,26 @@ export default function Login() {
     }
     setError(null)
     setBusy(true)
+    setWarming(false)
     try {
       await signIn(address, password)
       navigate(redirectTo, { replace: true })
     } catch (err) {
-      setError(err.message || 'Sign in failed. Try again.')
+      const isWakeUp = err?.kind === 'network' || err?.kind === 'timeout'
+      if (isWakeUp) {
+        setWarming(true)
+        setError(
+          err.kind === 'timeout'
+            ? 'The server is waking up after a period of inactivity (Render free tier). Please wait 30–60 seconds and click "Sign in" again.'
+            : err.message,
+        )
+        // Fire a background warmup ping so the next attempt finds a live server.
+        api.warmup()
+      } else {
+        setWarming(false)
+        // Surface specific errors (401 wrong password, 429 rate limit, etc.)
+        setError(err.message || 'Sign in failed. Try again.')
+      }
     } finally {
       setBusy(false)
     }
@@ -80,9 +97,9 @@ export default function Login() {
       {(notice || error) && (
         <div
           role={error ? 'alert' : 'status'}
-          className={`mb-4 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm ${error ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}
+          className={`mb-4 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm ${error ? (warming ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-red-200 bg-red-50 text-red-700') : 'border-amber-200 bg-amber-50 text-amber-800'}`}
         >
-          <Icon name={error ? 'alert' : 'clock'} size={16} className="mt-0.5 shrink-0" />
+          <Icon name={error ? (warming ? 'clock' : 'alert') : 'clock'} size={16} className="mt-0.5 shrink-0" />
           <p>{error || notice}</p>
         </div>
       )}

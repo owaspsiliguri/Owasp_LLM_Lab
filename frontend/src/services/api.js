@@ -9,9 +9,12 @@
 // split-origin deployment must be served through the same site (proxy or
 // same-origin domain) for the cookies to be sent at all.
 
-const COLD_START_TIMEOUT = 120000
-const RETRY_TIMEOUT = 60000
-const RETRY_DELAYS = [1500, 3000]
+// Free-tier backends (Render) can take up to 5 minutes to wake from a cold start.
+// GETs are retried automatically. POST/mutations get 3 minutes; if that times out
+// the user sees a helpful "server waking up" message instead of a generic network error.
+const COLD_START_TIMEOUT = 180000
+const RETRY_TIMEOUT = 90000
+const RETRY_DELAYS = [2000, 5000, 10000]
 const RETRYABLE_STATUS = new Set([429, 502, 503, 504])
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 const CSRF_EXEMPT = new Set([
@@ -120,7 +123,14 @@ function timeoutError(timeout, method) {
 }
 
 function networkError(cause) {
-  return new ApiError('The request could not be sent. Check your internet connection and try again.', {
+  // A TypeError with no message often means the browser aborted the fetch (e.g. CORS
+  // preflight timeout during a Render.com cold start, or no network). Give the user
+  // something actionable instead of "check your internet connection".
+  const isColdStart = cause && (cause instanceof TypeError || cause?.name === 'TypeError')
+  const message = isColdStart
+    ? 'The server is waking up after a period of inactivity. Please wait a moment and try again — it usually takes 30–60 seconds.'
+    : 'The request could not be sent. Check your internet connection and try again.'
+  return new ApiError(message, {
     kind: 'network',
     status: 0,
     retryable: true,
@@ -281,6 +291,7 @@ const patch = (path, payload) => request(path, {
 
 export const api = {
   health: () => request('/health', { retry: false }),
+  warmup: () => request('/health', { retry: true }).catch(() => { /* best-effort; ignore errors */ }),
   stats: () => request('/stats'),
   modules: () => request('/modules'),
   module: (id) => request(`/modules/${encodeURIComponent(id)}`),

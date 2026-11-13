@@ -4,8 +4,9 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from app.api.admin_routes import router as admin_router
 from app.api.auth_routes import router as auth_router
@@ -87,6 +88,20 @@ def create_app() -> FastAPI:
     # Root alias so Render and external uptime checks can probe /health
     # directly; the frontend and Render's configured check use /api/health.
     app.add_api_route("/health", health_endpoint, methods=["GET"], include_in_schema=False)
+
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        log.exception("Unhandled server error processing %s %s: %s", request.method, request.url.path, exc)
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": f"Server error: {exc.__class__.__name__} - {str(exc) or 'unexpected error'}"},
+        )
+        origin = request.headers.get("origin")
+        if origin and origin.rstrip("/") in {o.rstrip("/") for o in s.cors_origins}:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
+
     return app
 
 

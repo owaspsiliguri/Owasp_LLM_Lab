@@ -168,13 +168,16 @@ async def touch_login(user_id: str) -> None:
 
 async def create_session(*, user_id: str, refresh_hash: str, expires_at: str, user_agent: str | None = None, ip_hash: str | None = None) -> str:
     if supabase_store.configured():
-        return await supabase_store.create_session(
-            user_id=user_id,
-            refresh_hash=refresh_hash,
-            expires_at=expires_at,
-            user_agent=user_agent,
-            ip_hash=ip_hash,
-        )
+        try:
+            return await supabase_store.create_session(
+                user_id=user_id,
+                refresh_hash=refresh_hash,
+                expires_at=expires_at,
+                user_agent=user_agent,
+                ip_hash=ip_hash,
+            )
+        except Exception as exc:
+            log.warning("Supabase create_session failed: %s; falling back to local SQLite session", exc)
     return await _local(
         db.create_session,
         user_id=user_id,
@@ -187,34 +190,52 @@ async def create_session(*, user_id: str, refresh_hash: str, expires_at: str, us
 
 async def get_session_by_refresh(refresh_hash: str) -> dict[str, Any] | None:
     if supabase_store.configured():
-        return await supabase_store.get_session_by_refresh(refresh_hash)
+        try:
+            sess = await supabase_store.get_session_by_refresh(refresh_hash)
+            if sess:
+                return sess
+        except Exception as exc:
+            log.warning("Supabase get_session_by_refresh failed: %s", exc)
     return await _local(db.get_session_by_refresh, refresh_hash)
 
 
 async def rotate_session(old: dict[str, Any], *, new_hash: str, new_expires_at: str) -> str:
     if supabase_store.configured():
-        return await supabase_store.rotate_session(old, new_hash=new_hash, new_expires_at=new_expires_at)
+        try:
+            return await supabase_store.rotate_session(old, new_hash=new_hash, new_expires_at=new_expires_at)
+        except Exception as exc:
+            log.warning("Supabase rotate_session failed: %s; falling back to SQLite", exc)
     return await _local(db.rotate_session, old, new_hash=new_hash, new_expires_at=new_expires_at)
 
 
 async def revoke_all_for_user(user_id: str) -> None:
     if supabase_store.configured():
-        await supabase_store.revoke_all_for_user(user_id)
-    else:
-        await _local(db.revoke_all_for_user, user_id)
+        try:
+            await supabase_store.revoke_all_for_user(user_id)
+        except Exception as exc:
+            log.warning("Supabase revoke_all_for_user failed: %s", exc)
+    await _local(db.revoke_all_for_user, user_id)
 
 
 async def session_active(session_id: str) -> bool | None:
     if supabase_store.configured():
-        return await supabase_store.session_is_active(session_id)
+        try:
+            active = await supabase_store.session_is_active(session_id)
+            if active is not None:
+                return active
+        except Exception as exc:
+            log.warning("Supabase session_active failed: %s", exc)
     return await _local(db.session_is_active, session_id)
 
 
 async def record_auth_event(kind: str, *, user_id: str | None = None, detail: str | None = None) -> None:
     if supabase_store.configured():
-        await supabase_store.record_auth_event(kind, user_id=user_id, detail=detail)
-    else:
-        await _local(db.record_auth_event, kind, user_id=user_id, detail=detail)
+        try:
+            await supabase_store.record_auth_event(kind, user_id=user_id, detail=detail)
+            return
+        except Exception as exc:
+            log.warning("Supabase record_auth_event failed: %s", exc)
+    await _local(db.record_auth_event, kind, user_id=user_id, detail=detail)
 
 async def update_user_name(user_id: str, full_name: str | None) -> None:
     if supabase_store.configured():

@@ -204,17 +204,28 @@ def upsert_provider_user(
     point at the same user after the upgrade.
     """
     now = _now()
+    clean_email = email.strip().lower()
     with _connect() as conn:
-        conn.execute(
-            "INSERT INTO users(id, email, password_hash, full_name, role, provider, provider_id, created_at, last_login_at) "
-            "VALUES(?, ?, NULL, ?, ?, ?, ?, ?, ?) "
-            "ON CONFLICT(id) DO UPDATE SET "
-            "  email=excluded.email, full_name=COALESCE(excluded.full_name, users.full_name), "
-            "  role=excluded.role, last_login_at=excluded.last_login_at",
-            (user_id, email.strip().lower(), full_name, role, provider, user_id, now, now),
-        )
+        existing = conn.execute("SELECT id FROM users WHERE email=?", (clean_email,)).fetchone()
+        if existing and existing["id"] != user_id:
+            # Re-key or update the existing user record to match the provider's UUID
+            conn.execute("PRAGMA foreign_keys = OFF")
+            conn.execute(
+                "UPDATE users SET id=?, full_name=COALESCE(?, full_name), role=?, provider=?, provider_id=?, last_login_at=? WHERE email=?",
+                (user_id, full_name, role, provider, user_id, now, clean_email),
+            )
+            conn.execute("PRAGMA foreign_keys = ON")
+        else:
+            conn.execute(
+                "INSERT INTO users(id, email, password_hash, full_name, role, provider, provider_id, created_at, last_login_at) "
+                "VALUES(?, ?, NULL, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET "
+                "  email=excluded.email, full_name=COALESCE(excluded.full_name, users.full_name), "
+                "  role=excluded.role, last_login_at=excluded.last_login_at",
+                (user_id, clean_email, full_name, role, provider, user_id, now, now),
+            )
         row = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
-    return dict(row)
+    return dict(row) if row else {"id": user_id, "email": clean_email, "role": role, "full_name": full_name}
 
 
 def get_user(user_id: str) -> dict[str, Any] | None:
