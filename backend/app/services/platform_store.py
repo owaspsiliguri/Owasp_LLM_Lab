@@ -7,9 +7,12 @@ call this module; the browser never writes progress or course completion.
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 from app.services import db, supabase_store
+
+log = logging.getLogger("lab.platform_store")
 
 
 def backend_name() -> str:
