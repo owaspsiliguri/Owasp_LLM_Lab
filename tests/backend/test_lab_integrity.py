@@ -210,11 +210,14 @@ def test_failed_fix_gets_judge_review_but_not_a_new_verdict(client, monkeypatch)
 
 # ---- 4. Leaderboard ---------------------------------------------------------
 
-def test_leaderboard_disabled_without_supabase(client, monkeypatch):
+def test_leaderboard_available_on_local_backend(client, monkeypatch):
+    # The SQLite backend is a first-class store in local mode, so the
+    # leaderboard is available even without Supabase.
     for var in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_JWT_SECRET"):
         monkeypatch.delenv(var, raising=False)
     body = client.get("/api/leaderboard").json()
-    assert body["enabled"] is False and body["entries"] == []
+    assert body["enabled"] is True and isinstance(body["entries"], list)
+    assert body["formula"] == "flag 100 · fix-it 150 · explore 0"
 
 
 def test_leaderboard_requires_a_session_when_configured(client, supabase_env):

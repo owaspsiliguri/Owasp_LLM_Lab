@@ -188,6 +188,9 @@ class VectorWeaknesses(VulnerabilityModule):
 
     def _present(self, res: dict[str, Any], secure: bool, req: RunRequest) -> dict[str, Any]:
         user = USERS.get(self.pick_variant(req), USERS["alice"])
+        # The objective is the Globex acquisition access code, not merely any
+        # foreign document: only an answer that quotes the flag earns proof.
+        flag_exposed = flag_for(ID) in res["answer"]
         leaked = bool(res["unauthorized"])
         out: dict[str, Any] = {
             "output": f"Acting as {user['id']} ({user['tenant']}/{user['clearance']}):\n" + res["answer"],
@@ -201,7 +204,7 @@ class VectorWeaknesses(VulnerabilityModule):
             "controls": res["controls"],
             "engine": req.engine,
         }
-        if leaked and not secure:
+        if flag_exposed and not secure:
             out["proof"] = flag_for(ID)
         return out
 

@@ -9,7 +9,7 @@ Scope: the platform itself (not the intentional lab weaknesses). Performed on th
 | Dependency scan (Python) | `pip-audit` on the full pinned set (`backend/constraints.txt`, 86 packages) | Starlette CVEs via the original FastAPI pin were **fixed** by pinning FastAPI 0.142.2 (starlette 1.7.0). Adding ChromaDB surfaced three advisories (PYSEC-2026-3813/3814/3815) in chromadb 0.5.23 with **no fixed release**: cross-tenant authorization, SimpleRBAC tenant checks, and `trust_remote_code` embedding models on the server. None applies to this lab (no tenants, no auth provider, local hash embeddings only) and the Chroma service is on an internal network with no published port. They are explicitly ignored in CI with this justification and must be revisited when a fix ships. |
 | Dependency scan (JS) | `npm audit --omit=dev` | High-severity react-router/@remix-run findings **fixed** by pinning react-router-dom 6.30.6. Two moderate advisories remain in react-router 6.x (backslash open redirect in `<Link>`/`useNavigate`; SSR `deserializeErrors`). The app uses only static link targets and no SSR, so exposure is nil in this codebase; upgrading to v7 is a breaking change and is tracked as follow-up. CI fails on high severity. |
 | Manual sandbox review | Adversarial probes of the Fix-It sandbox | **Two real bypass primitives found and fixed**: `string.Formatter.get_field` (arbitrary attribute traversal, reaching module globals) and `typing.get_type_hints` (string evaluation). Fix: allow-list reduced to `re, html, json, unicodedata, urllib.parse, sqlite3`; attributes `get_field, vformat, format_map, get_type_hints, load_extension, enable_load_extension` denied; string literals containing `__` denied. Regression tests added (`tests/backend/test_security.py`). |
-| Authentication / authorization | Review | No authentication by design (single-user local lab, no real data). Mitigated by binding the only published port to 127.0.0.1. Documented in Security_Model.md. |
+| Authentication / authorization | Review + backend tests | **Backend-owned cookie auth** (short-lived HS256 JWT + rotating opaque refresh token, both HttpOnly; readable CSRF cookie mirrored in `X-CSRF-Token`; reuse detection revokes all sessions; logout/password change revoke all). Admin routes re-check the database role on every request. Supabase GoTrue is federated server-side with the same UUID; the browser never stores a Supabase token. The original open local mode remains available only when no identity provider is configured, and is documented in Security_Model.md. |
 | Input validation | Review + tests | All bodies validated by pydantic with `extra=forbid` and length limits; unknown module and hint indexes return 404; variant/engine enumerations enforced; oversized code rejected. |
 | Application security testing | Automated tests against the running ASGI app and a live uvicorn smoke test | Security headers present, CORS rejects unknown origins, rate limiter returns 429, flags absent from source and API payloads, secret file mode 0600. |
 | Container configuration | Review of Dockerfiles and compose (automated by `tests/infra`) | Non-root users, read-only root filesystems, `cap_drop: ALL`, `no-new-privileges`, memory and PID limits, no published ports except frontend on loopback, no credentials in compose. |
@@ -18,6 +18,29 @@ Scope: the platform itself (not the intentional lab weaknesses). Performed on th
 | Simulation safety | Review | LLM04 and LLM06 compute virtual units only; burst size is validated to 1..100000, and the loop simulation has a hard iteration ceiling, so no request can consume real resources. |
 
 | Tool-calling and supply-chain simulations | Review + tests | LLM05 never downloads or executes anything (hooks are reported strings); LLM07 mutates only a per-request in-memory copy of its state; LLM08 only inspects text. Inputs are length-limited and the LLM05 spec grammar is strictly validated. |
+
+## Platform upgrade review (post-authentication work)
+
+- **Sessions:** access JWT 15 minutes, refresh 30 days, both HttpOnly; refresh tokens are
+  stored only as SHA-256 hashes and rotate on every use. Reuse of a rotated/revoked token
+  revokes all sessions for the account. Access tokens carry `sid`, checked against the store.
+- **CSRF / origin:** double-submit `llm_csrf` plus `X-CSRF-Token`, `SameSite=Lax`, and an
+  `Origin` allow-list on state-changing requests. Cross-site cookie auth is not supported by
+  design; deployments must proxy `/api` same-origin or use same-site domains.
+- **RBAC:** `AdminUser` checks the database role on every admin request. Course upload, edit,
+  publish, archive and the roster/audit overview are server-side operations.
+- **Scoring:** the browser cannot write progress. Flag (100) and Fix-It (150) awards are
+  written only after server verification, at most once per lab. Explore and chat award 0.
+- **RLS migration:** browser INSERT/UPDATE/DELETE on `progress` is revoked; courses and
+  lessons are read-only; `auth_sessions` and `auth_events` have no browser grants. Existing
+  rows are preserved. The migration is additive and idempotent but must be applied by the
+  operator; it is not executed by the application.
+- **Course content:** Markdown is parsed and validated server-side (UTF-8, size cap, required
+  frontmatter, unique slug, at least one lesson). Rendering uses React elements, never raw
+  HTML, and link schemes are validated.
+- **Verified locally:** 314 backend tests and 43 frontend tests passed; lint and production
+  build passed. The production Supabase migration and Render/Vercel deployment were **not**
+  executed or verified in this environment (no production credentials).
 
 ## Not performed (needs a Docker host / external tooling)
 - Docker image builds, container health and the full stack were **not executed in the environment where this archive was produced** (no Docker daemon). Compose is validated structurally by tests only; CI builds and smoke-tests it.

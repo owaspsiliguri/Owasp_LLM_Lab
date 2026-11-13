@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.jsx'
-import { isAuthEnabled } from '../services/supabase.js'
 import { useModules } from '../hooks/useModules.js'
 import { summarize, useProgress } from '../hooks/useProgress.jsx'
 import { useToast } from '../components/Toast.jsx'
@@ -15,15 +14,16 @@ function initials(name) {
 }
 
 export default function Profile() {
-  const { session, profile, profileLoading, updateName, updatePassword, signOut } = useAuth()
+  const { enabled, user, profile, updateName, updatePassword, signOut } = useAuth()
   const { modules, loading, error, errorKind, reload } = useModules()
   const progress = useProgress()
   const toast = useToast()
-  const authed = Boolean(isAuthEnabled() && session)
+  const authed = Boolean(enabled && user)
 
   const [name, setName] = useState(profile?.full_name || '')
   const [nameBusy, setNameBusy] = useState(false)
   const [nameMessage, setNameMessage] = useState(null)
+  const [currentPassword, setCurrentPassword] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [passwordBusy, setPasswordBusy] = useState(false)
@@ -34,8 +34,8 @@ export default function Profile() {
   if (loading || error) return <Loading error={error} errorKind={errorKind} onRetry={reload} />
 
   const summary = summarize(modules, progress)
-  const email = session?.user?.email || 'Local browser session'
-  const displayName = profile?.full_name || (authed ? email.split('@')[0] : 'Anonymous learner')
+  const email = user?.email || 'No account signed in'
+  const displayName = profile?.full_name || (authed ? email.split('@')[0] : 'Guest learner')
   const role = profile?.role || 'student'
   const joined = profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : null
 
@@ -62,6 +62,10 @@ export default function Profile() {
   async function savePassword(event) {
     event.preventDefault()
     if (passwordBusy) return
+    if (!currentPassword) {
+      setPasswordMessage({ ok: false, text: 'Enter your current password.' })
+      return
+    }
     if (password.length < MIN_PASSWORD) {
       setPasswordMessage({ ok: false, text: `Password must be at least ${MIN_PASSWORD} characters.` })
       return
@@ -73,11 +77,12 @@ export default function Profile() {
     setPasswordBusy(true)
     setPasswordMessage(null)
     try {
-      await updatePassword(password)
+      await updatePassword(currentPassword, password)
+      setCurrentPassword('')
       setPassword('')
       setConfirm('')
-      setPasswordMessage({ ok: true, text: 'Password updated.' })
-      toast.success('Password changed.')
+      setPasswordMessage({ ok: true, text: 'Password updated. Every session was signed out; sign in again with the new password.' })
+      toast.success('Password changed. Sign in again.')
     } catch (err) {
       setPasswordMessage({ ok: false, text: err.message })
     } finally {
@@ -100,7 +105,7 @@ export default function Profile() {
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
               <span className={`badge ${role === 'admin' ? 'badge-warning' : 'badge-neutral'}`}>{role}</span>
               {joined && <span className="text-slate-500">Member since {joined}</span>}
-              {!authed && <span className="text-slate-500">Local mode — progress stays in this browser</span>}
+              {!authed && <span className="text-slate-500">Open mode — progress is not recorded</span>}
             </div>
           </div>
           {authed && (
@@ -110,7 +115,7 @@ export default function Profile() {
             </button>
           )}
         </div>
-        {authed && profileLoading && <p className="mt-3 text-xs text-slate-500">Refreshing profile…</p>}
+        {authed && <p className="mt-3 text-xs text-slate-500">Signed in with an HttpOnly session cookie. Signing out revokes it immediately.</p>}
       </section>
 
       <section aria-label="Your statistics" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -155,8 +160,15 @@ export default function Profile() {
         {authed && (
           <section className="card p-5 sm:p-6">
             <h2 className="text-base font-semibold text-ink">Change password</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">Use at least {MIN_PASSWORD} characters. You stay signed in after the change.</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">Use at least {MIN_PASSWORD} characters. Changing the password signs out every session, including this browser.</p>
             <form onSubmit={savePassword} className="mt-4 space-y-3" noValidate>
+              <div>
+                <label className="label" htmlFor="profile-current-password">Current password</label>
+                <input
+                  id="profile-current-password" type="password" autoComplete="current-password" className="input"
+                  value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} maxLength={200}
+                />
+              </div>
               <div>
                 <label className="label" htmlFor="profile-password">New password</label>
                 <input

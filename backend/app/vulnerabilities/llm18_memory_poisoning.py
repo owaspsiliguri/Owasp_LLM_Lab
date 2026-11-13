@@ -30,7 +30,20 @@ INSTRUCTION_RE = re.compile(
     re.I | re.S,
 )
 SENSITIVE_RE = re.compile(r"\b(?:password|passphrase|api[_ ]?key|secret|token|verification code)\b", re.I)
+# "I am not an admin" is a denial, not a privilege claim.
+NEGATED_PRIVILEGE_RE = re.compile(
+    r"\b(?:not|never|no longer|isn't|aren't|wasn't|weren't)\b(?:\W+\w+){0,4}\W+"
+    r"(?:an?\s+)?(?:admin|administrator|owner|root|verified|authori[sz]ed|privileged)\b",
+    re.I,
+)
 MAX_MEMORY_CHARS = 120
+
+
+def asserts_privilege(text: str) -> bool:
+    """True only when the text asserts privilege rather than denying it."""
+    if not isinstance(text, str):
+        return False
+    return bool(PRIVILEGE_RE.search(NEGATED_PRIVILEGE_RE.sub(" ", text)))
 
 
 def accept_memory(candidate, session):
@@ -61,7 +74,7 @@ def accept_memory(candidate, session):
 def vulnerable_memory_flow(note: str) -> dict[str, Any]:
     # VULNERABLE: the note is persisted verbatim and its claims become context
     # for the next session, including the role the assistant believes it serves.
-    elevated = bool(PRIVILEGE_RE.search(note))
+    elevated = asserts_privilege(note)
     role = "admin" if elevated else SESSION["role"]
     summary = f"Memory saved: {note}\nNext session → support summary for {SESSION['id']} (role: {role})."
     if elevated:
@@ -133,7 +146,7 @@ class PersistentMemoryPoisoning(VulnerabilityModule):
         "Treat memory as untrusted user data: typed fields, allow-listed keys, size limits, provenance and no "
         "authorization decisions. Identity and role always come from the authentication layer."
     )
-    vulnerable_fns = [vulnerable_memory_flow]
+    vulnerable_fns = [asserts_privilege, vulnerable_memory_flow]
     secure_fns = [accept_memory, secure_memory_flow]
 
     def vulnerable_demo(self, req: RunRequest) -> dict[str, Any]:

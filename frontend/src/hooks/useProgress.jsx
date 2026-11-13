@@ -1,14 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './useAuth.jsx'
-import { supabase } from '../services/supabase.js'
 import { LAB_MAX_POINTS, scoreOf } from '../services/points.js'
+import { api } from '../services/api.js'
 
-const KEY = 'lll.progress.v1'
-const FIELDS = ['explored', 'flag', 'fixit']
-
-// Progress is stored per identity: anonymous browsers use the classic key and
-// signed-in users get their own, so two accounts on one device never mix.
-const keyFor = (userId) => (userId ? `${KEY}.${userId}` : KEY)
+const EMPTY = { modules: {}, courses: {} }
+const Ctx = createContext(null)
 
 function normalize(raw) {
   const modules = {}
@@ -23,84 +19,68 @@ function normalize(raw) {
       }
     }
   }
-  return { modules }
+  const courses = raw && typeof raw.courses === 'object' && raw.courses ? raw.courses : {}
+  return { modules, courses }
 }
 
-function loadKey(key) {
-  try {
-    return normalize(JSON.parse(localStorage.getItem(key)))
-  } catch {
-    return normalize(null)
-  }
-}
-
-const Ctx = createContext(null)
-
+/**
+ * Progress is read from the API and written only by the server after it has
+ * verified a run, flag or Fix-It submission. There is deliberately no
+ * localStorage copy: two browsers on one account always see the same records,
+ * and the browser cannot invent an achievement.
+ */
 export function ProgressProvider({ children }) {
-  const { session, loading: authLoading } = useAuth()
-  const userId = session?.user?.id || null
-  const [state, setState] = useState(() => loadKey(keyFor(null)))
+  const { user, loading: authLoading, enabled } = useAuth()
+  const userId = user?.id || null
+  const [state, setState] = useState({ ...EMPTY, loading: true, error: null })
+  const request = useRef(0)
 
-  useEffect(() => {
-    if (authLoading) return undefined
-    setState(loadKey(keyFor(userId)))
-    if (!userId || !supabase()) return undefined
-    let live = true
-    supabase().from('progress').select('module_id,explored,flag,fixit,updated_at').eq('user_id', userId)
-      .then(({ data, error }) => {
-        if (!live || error || !data?.length) return
-        setState((current) => {
-          const modules = { ...current.modules }
-          for (const row of data) {
-            const existing = modules[row.module_id] || {}
-            const at = row.updated_at && (!existing.at || row.updated_at > existing.at) ? row.updated_at : existing.at
-            modules[row.module_id] = {
-              explored: Boolean(existing.explored || row.explored),
-              flag: Boolean(existing.flag || row.flag),
-              fixit: Boolean(existing.fixit || row.fixit),
-              at: at || null,
-            }
-          }
-          return { ...current, modules }
-        })
-      })
-      .catch(() => { /* offline: the local copy stays authoritative */ })
-    return () => { live = false }
-  }, [userId, authLoading])
+  const load = useCallback(async () => {
+    const ticket = ++request.current
+    setState((current) => ({ ...current, loading: true, error: null }))
+    try {
+      const data = await api.progress()
+      if (request.current !== ticket) return
+      setState({ ...normalize(data), loading: false, error: null })
+    } catch (error) {
+      if (request.current !== ticket) return
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: error.kind === 'auth' || error.status === 401 ? null : error.message,
+        ...(error.kind === 'auth' || error.status === 401 ? EMPTY : {}),
+      }))
+    }
+  }, [])
 
   useEffect(() => {
     if (authLoading) return
-    try { localStorage.setItem(keyFor(userId), JSON.stringify(state)) } catch { /* storage unavailable */ }
-  }, [state, userId, authLoading])
-
-  const mark = useCallback((id, field) => {
-    if (!FIELDS.includes(field)) return
-    const at = new Date().toISOString()
-    setState((current) => {
-      const existing = current.modules[id] || {}
-      return {
-        ...current,
-        modules: { ...current.modules, [id]: { ...existing, [field]: true, at } },
-      }
-    })
-    if (userId && supabase()) {
-      supabase().from('progress')
-        .upsert({ user_id: userId, module_id: id, [field]: true, updated_at: at })
-        .then(({ error }) => { if (error) console.warn('Progress sync failed:', error.message) })
-        .catch(() => { /* offline: local progress is unaffected */ })
+    if (enabled && !userId) {
+      setState({ ...EMPTY, loading: false, error: null })
+      return
     }
-  }, [userId])
+    void load()
+  }, [authLoading, enabled, userId, load])
 
-  const reset = useCallback(() => {
-    setState(normalize(null))
-    if (userId && supabase()) {
-      supabase().from('progress').delete().eq('user_id', userId)
-        .then(() => {})
-        .catch(() => { /* server rows clear on the next successful sync */ })
-    }
-  }, [userId])
+  // Kept so a caller cannot forget to refresh after a server-verified action.
+  const mark = useCallback(() => { void load() }, [load])
 
-  const value = useMemo(() => ({ ...state, mark, reset }), [state, mark, reset])
+  const refresh = useCallback(() => load(), [load])
+
+  const reset = useCallback(async () => {
+    await api.resetProgress()
+    setState({ ...EMPTY, loading: false, error: null })
+    await load()
+  }, [load])
+
+  const value = useMemo(() => ({
+    ...state,
+    mark,
+    refresh,
+    reset,
+    reload: load,
+  }), [state, mark, refresh, reset, load])
+
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
@@ -117,11 +97,17 @@ export function summarize(modules, progress) {
   const flags = modules.filter((m) => entry(m.id).flag).length
   const fixes = modules.filter((m) => entry(m.id).fixit).length
   const completed = modules.filter((m) => entry(m.id).flag && entry(m.id).fixit).length
+  const scored = flags + fixes
   return {
-    total, explored, flags, fixes, completed,
+    total,
+    explored,
+    flags,
+    fixes,
+    completed,
     score: scoreOf(modules, progress),
     maxScore: total * LAB_MAX_POINTS,
-    percent: total ? Math.round(((explored + flags + fixes) / (total * 3)) * 100) : 0,
+    // Points are only awarded for the flag and the validated fix.
+    percent: total ? Math.round((scored / (total * 2)) * 100) : 0,
     completionPercent: total ? Math.round((completed / total) * 100) : 0,
   }
 }

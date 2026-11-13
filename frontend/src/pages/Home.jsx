@@ -5,6 +5,7 @@ import { useModules } from '../hooks/useModules.js'
 import { labStatus, summarize, useProgress } from '../hooks/useProgress.jsx'
 import { DIFFICULTIES, riskOf, risksIn } from '../services/labFilters.js'
 import { PATHS } from '../content/paths.js'
+import { LAB_MAX_POINTS } from '../services/points.js'
 import { Badge, Button, ProgressBar as Bar, WakeNotice } from '../components/ui'
 import Icon from '../components/Icons.jsx'
 
@@ -70,7 +71,7 @@ function LabCard({ module, entry }) {
         <p className="mt-1.5 line-clamp-2 flex-1 text-sm leading-6 text-fg-muted">{module.overview}</p>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-subtle">
           <span className="inline-flex items-center gap-1"><Icon name="clock" size={13} /> {module.estimated_minutes} min</span>
-          <span className="inline-flex items-center gap-1"><Icon name="target" size={13} /> 260 pts</span>
+          <span className="inline-flex items-center gap-1"><Icon name="target" size={13} /> {LAB_MAX_POINTS} pts</span>
           <span className="truncate">{riskOf(module).name}</span>
         </div>
       </div>

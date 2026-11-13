@@ -1,177 +1,226 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { isAuthEnabled, supabase } from '../services/supabase.js'
-import { setAuthToken, setUnauthorizedHandler } from '../services/api.js'
+import { api, setUnauthorizedHandler } from '../services/api.js'
 
-const LOCAL = { enabled: false, session: null, profile: null, loading: false, profileLoading: false, notice: null }
+const LOCAL = {
+  enabled: false,
+  registration: false,
+  mode: 'open',
+  user: null,
+  session: null,
+  profile: null,
+  loading: false,
+  profileLoading: false,
+  notice: null,
+}
 const Ctx = createContext(null)
 const SESSION_CHECK_MS = 5 * 60 * 1000
 
-async function fetchProfile(userId) {
-  const sb = supabase()
-  if (!sb) return null
-  const { data, error } = await sb.from('profiles')
-    .select('id,email,full_name,role,created_at')
-    .eq('id', userId)
-    .maybeSingle()
-  return error ? null : data
+function signedOut(extra = {}) {
+  return {
+    enabled: true,
+    registration: false,
+    mode: 'local',
+    user: null,
+    session: null,
+    profile: null,
+    loading: false,
+    profileLoading: false,
+    notice: null,
+    ...extra,
+  }
 }
 
 export function AuthProvider({ children }) {
-  const enabled = isAuthEnabled()
   const [state, setState] = useState({
-    enabled, session: null, profile: null, loading: enabled, profileLoading: false, notice: null,
+    ...LOCAL,
+    enabled: false,
+    loading: true,
+    configured: false,
   })
 
   useEffect(() => {
-    if (!enabled) {
-      setAuthToken(null)
-      setState({ ...LOCAL })
-      return undefined
-    }
-
-    const sb = supabase()
     let live = true
-    let currentUserId = null
-    let profileRequest = 0
-    let lastCheck = 0
-    let hadSession = false
 
-    async function applySession(session, event) {
+    async function boot() {
+      let config
+      try {
+        config = await api.authConfig()
+      } catch (error) {
+        if (!live) return
+        setState({
+          ...LOCAL,
+          loading: false,
+          notice: `Could not reach the authentication service: ${error.message}`,
+        })
+        return
+      }
       if (!live) return
-      if (!session) {
-        const notice = hadSession && event === 'SIGNED_OUT'
-          ? 'Your session ended. Sign in again to continue where you left off.'
-          : null
-        hadSession = false
-        currentUserId = null
-        setAuthToken(null)
-        setState({ enabled: true, session: null, profile: null, loading: false, profileLoading: false, notice })
+      if (!config.enabled) {
+        setState({
+          ...LOCAL,
+          enabled: false,
+          registration: false,
+          mode: config.mode || 'open',
+          configured: true,
+          loading: false,
+        })
         return
       }
 
-      hadSession = true
-      setAuthToken(session.access_token)
-
-      if (event === 'TOKEN_REFRESHED') {
-        setState((current) => ({ ...current, session, loading: false }))
-        return
+      let user = null
+      try {
+        const me = await api.me()
+        user = me?.user || null
+      } catch {
+        // A 401 is not an error here: the visitor is simply signed out.
       }
-
-      const switching = session.user.id !== currentUserId
-      currentUserId = session.user.id
-      setState((current) => ({
-        ...current,
-        session,
+      if (!live) return
+      setState({
+        enabled: true,
+        registration: Boolean(config.registration),
+        mode: config.mode || 'local',
+        configured: true,
+        user,
+        session: user ? { user } : null,
+        profile: user,
         loading: false,
+        profileLoading: false,
         notice: null,
-        profile: switching ? null : current.profile,
-        profileLoading: switching || !current.profile,
-      }))
-
-      if (switching || !state.profile) {
-        const request = ++profileRequest
-        const profile = await fetchProfile(session.user.id)
-        if (!live || request !== profileRequest) return
-        setState((current) => (
-          current.session?.user?.id === session.user.id
-            ? { ...current, profile, profileLoading: false }
-            : current
-        ))
-      }
+      })
     }
 
-    sb.auth.getSession()
-      .then(({ data, error }) => applySession(error ? null : data.session))
-      .catch(() => applySession(null))
+    void boot()
+    return () => { live = false }
+  }, [])
 
-    const { data: subscription } = sb.auth.onAuthStateChange((event, session) => {
-      void applySession(session, event)
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setState((current) => {
+        if (!current.user) return current
+        return {
+          ...current,
+          user: null,
+          session: null,
+          profile: null,
+          loading: false,
+          notice: 'Your session ended. Sign in again to continue where you left off.',
+        }
+      })
     })
+    return () => setUnauthorizedHandler(null)
+  }, [])
 
-    const onVisibility = () => {
+  useEffect(() => {
+    if (!state.enabled || !state.user) return undefined
+    let lastCheck = 0
+    const onVisibility = async () => {
       if (document.visibilityState !== 'visible') return
       const now = Date.now()
       if (now - lastCheck < SESSION_CHECK_MS) return
       lastCheck = now
-      sb.auth.refreshSession().catch(() => { /* the auth listener handles expiry */ })
+      try {
+        const me = await api.me()
+        const user = me?.user || null
+        setState((current) => {
+          if (!current.user) return current
+          if (!user) {
+            return {
+              ...current,
+              user: null,
+              session: null,
+              profile: null,
+              notice: 'Your session ended. Sign in again to continue where you left off.',
+            }
+          }
+          return { ...current, user, session: { user }, profile: user }
+        })
+      } catch { /* transient failure: keep the current session */ }
     }
     document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [state.enabled, state.user])
 
-    setUnauthorizedHandler(async () => {
-      const { data } = await sb.auth.getSession().catch(() => ({ data: { session: null } }))
-      if (!data.session) await applySession(null, 'SIGNED_OUT')
-    })
-
-    return () => {
-      live = false
-      subscription.subscription.unsubscribe()
-      document.removeEventListener('visibilitychange', onVisibility)
-      setUnauthorizedHandler(null)
-    }
-    // `state.profile` is intentionally read only at effect setup; session events
-    // drive every later update.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled])
-
-  const adoptSession = useCallback(async (session) => {
-    if (!session) return
-    setAuthToken(session.access_token)
-    setState((current) => ({ ...current, session, loading: false, notice: null, profileLoading: true }))
-    const profile = await fetchProfile(session.user.id)
-    setState((current) => (
-      current.session?.user?.id === session.user.id ? { ...current, profile, profileLoading: false } : current
-    ))
+  const adoptUser = useCallback((user) => {
+    setState((current) => ({
+      ...current,
+      enabled: true,
+      user,
+      session: user ? { user } : null,
+      profile: user,
+      loading: false,
+      profileLoading: false,
+      notice: null,
+    }))
   }, [])
 
   const signIn = useCallback(async (email, password) => {
-    const { data, error } = await supabase().auth.signInWithPassword({ email, password })
-    if (error) throw new Error(error.message)
-    await adoptSession(data.session)
-  }, [adoptSession])
+    const result = await api.login(email.trim(), password)
+    adoptUser(result.user)
+    return result.user
+  }, [adoptUser])
 
   const signUp = useCallback(async ({ fullName, email, password }) => {
-    const { data, error } = await supabase().auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    })
-    if (error) throw new Error(error.message)
-    if (data.session) await adoptSession(data.session)
-    return { needsConfirmation: !data.session }
-  }, [adoptSession])
+    const result = await api.register({ email: email.trim(), password, fullName })
+    if (result.user) adoptUser(result.user)
+    return {
+      needsConfirmation: Boolean(result.needs_confirmation),
+      user: result.user || null,
+    }
+  }, [adoptUser])
 
   const signOut = useCallback(async () => {
-    setAuthToken(null)
-    setState({ enabled: true, session: null, profile: null, loading: false, profileLoading: false, notice: null })
-    try { await supabase().auth.signOut() } catch { /* local state has already been cleared */ }
+    try { await api.logout() } catch { /* clear the browser state regardless */ }
+    setState((current) => signedOut({
+      enabled: current.enabled,
+      registration: current.registration,
+      mode: current.mode,
+    }))
   }, [])
 
   const refreshProfile = useCallback(async () => {
-    const sb = supabase()
-    if (!sb) return
-    const { data: { session } } = await sb.auth.getSession()
-    if (!session) return
-    const profile = await fetchProfile(session.user.id)
-    if (profile) setState((current) => (current.session ? { ...current, profile } : current))
+    try {
+      const result = await api.me()
+      const user = result?.user || null
+      setState((current) => (user
+        ? { ...current, user, session: { user }, profile: user }
+        : { ...current, user: null, session: null, profile: null }))
+      return user
+    } catch {
+      return null
+    }
   }, [])
 
   const updateName = useCallback(async (fullName) => {
-    if (!isAuthEnabled()) throw new Error('Cloud profiles are not configured on this deployment.')
-    const { error } = await supabase().rpc('save_profile', { p_full_name: fullName })
-    if (error) throw new Error(error.message)
-    await refreshProfile()
-  }, [refreshProfile])
+    if (!state.enabled) throw new Error('This deployment has no account system attached.')
+    const result = await api.updateProfile(fullName)
+    if (result?.user) adoptUser(result.user)
+  }, [adoptUser, state.enabled])
 
-  const updatePassword = useCallback(async (password) => {
-    if (!isAuthEnabled()) throw new Error('Cloud profiles are not configured on this deployment.')
-    const { error } = await supabase().auth.updateUser({ password })
-    if (error) throw new Error(error.message)
-  }, [])
+  const updatePassword = useCallback(async (currentPassword, newPassword) => {
+    if (!state.enabled) throw new Error('This deployment has no account system attached.')
+    const result = await api.changePassword(currentPassword, newPassword)
+    if (result?.signed_out) {
+      setState((current) => signedOut({
+        enabled: current.enabled,
+        registration: current.registration,
+        mode: current.mode,
+        notice: 'Password changed. Every session was signed out; sign in again with the new password.',
+      }))
+    }
+    return result
+  }, [state.enabled])
 
   const clearNotice = useCallback(() => setState((current) => ({ ...current, notice: null })), [])
 
   const value = useMemo(() => ({
-    ...state, signIn, signUp, signOut, refreshProfile, updateName, updatePassword, clearNotice,
+    ...state,
+    signIn,
+    signUp,
+    signOut,
+    refreshProfile,
+    updateName,
+    updatePassword,
+    clearNotice,
   }), [state, signIn, signUp, signOut, refreshProfile, updateName, updatePassword, clearNotice])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

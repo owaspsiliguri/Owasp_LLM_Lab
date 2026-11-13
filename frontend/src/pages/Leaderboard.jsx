@@ -48,7 +48,7 @@ export default function Leaderboard() {
         <EmptyState
           icon="leaderboard"
           title="No global ranking on this deployment"
-          body="The leaderboard appears when the backend is connected to Supabase. Local mode keeps progress in the browser, so there are no accounts to rank."
+          body="The leaderboard appears when an identity provider is configured and learners have accounts. Without one there is no account to rank."
         />
       </div>
     )
@@ -63,7 +63,7 @@ export default function Leaderboard() {
       <PageHeader
         eyebrow="Community"
         title="Global leaderboard"
-        description="Ranked from persisted flags, validated fixes and explored labs. Identities are masked unless a learner sets a display name."
+        description="Ranked from persisted flags and validated fixes. Identities are masked unless a learner sets a display name."
         actions={<span className="badge badge-neutral">Scoring: {data.formula}</span>}
       />
 

@@ -167,7 +167,10 @@ class ParameterTampering(VulnerabilityModule):
             return {"output": "The assistant could not identify an order in that request.", "leaked": False, "controls": [], "details": {"model tool call": "none"}}
         tuned = apply_client_overrides(call, req.input)
         result = execute_refund_vulnerable(tuned, ORDERS)
-        leaked = bool(result["violations"])
+        # A $0 (or negative) foreign-order attempt is a rejected/meaningless
+        # action, not a successful exploit: require money to actually move.
+        executed_amount = float(tuned.get("amount") or 0)
+        leaked = bool(result["violations"] and result["ok"] and executed_amount > 0)
         out: dict[str, Any] = {
             "output": result["output"],
             "details": {

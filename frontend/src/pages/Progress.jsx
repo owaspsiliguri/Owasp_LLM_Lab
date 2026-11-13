@@ -37,10 +37,15 @@ export default function Progress() {
   const summary = summarize(modules, progress)
   const hasProgress = Object.values(progress.modules).some((entry) => entry.explored || entry.flag || entry.fixit)
 
-  function reset() {
-    progress.reset()
-    setConfirming(false)
-    toast.success('Progress cleared for this account.')
+  async function reset() {
+    try {
+      await progress.reset()
+      setConfirming(false)
+      toast.success('Progress cleared for this account.')
+    } catch (error) {
+      setConfirming(false)
+      toast.error(`Could not reset progress: ${error.message}`)
+    }
   }
 
   return (
@@ -48,7 +53,7 @@ export default function Progress() {
       <PageHeader
         eyebrow="Records"
         title="Progress"
-        description="Every lab, every stage and the points you have earned. Signed-in progress is also stored in your account; the browser keeps a local copy so the page works while offline."
+        description="Every lab, every stage and the points you have earned. Progress is stored on the server and survives a browser change; it is updated only after the backend verifies an achievement."
         actions={hasProgress ? (
           confirming ? null : (
             <button type="button" className="btn btn-danger" onClick={() => setConfirming(true)}>
@@ -63,7 +68,7 @@ export default function Progress() {
         <div role="alertdialog" aria-labelledby="reset-heading" className="rounded-xl border border-red-200 bg-red-50 p-4 sm:p-5">
           <h2 id="reset-heading" className="text-sm font-semibold text-red-900">Reset all progress?</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-red-800">
-            This clears explored, flag and Fix-It records for this account, including the cloud copy. Captured flags
+            This clears explored, flag and Fix-It records for this account on the server. Captured flags
             can be re-submitted, but the record itself cannot be restored. This does not delete the account.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -83,8 +88,8 @@ export default function Progress() {
       <section className="card p-5 sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="text-base font-semibold text-ink">Overall progress</h2>
-            <p className="mt-0.5 text-sm text-slate-500">All three stages across every lab.</p>
+            <h2 className="text-base font-semibold text-ink">Completion</h2>
+            <p className="mt-0.5 text-sm text-slate-500">A lab counts when its flag is captured and its fix is validated.</p>
           </div>
           <span className="text-2xl font-semibold tracking-tight text-ink">{summary.percent}%</span>
         </div>

@@ -4,11 +4,11 @@ import { api } from '../services/api.js'
 import { useModules } from '../hooks/useModules.js'
 import { labStatus, useProgress } from '../hooks/useProgress.jsx'
 import { filterQuery, riskOf, sequenceFor } from '../services/labFilters.js'
-import { PATHS } from '../content/paths.js'
+import { PATHS, courseSlugFor } from '../content/paths.js'
 import { LAB_MAX_POINTS, POINT_ROWS, labPoints } from '../services/points.js'
 import { Badge, Button, CodeBlock, CodeDiff, EmptyState, Loading, ProgressBar, Tabs } from '../components/ui'
 import Markdown from '../components/Markdown.jsx'
-import RunPanel, { RunResults, useRun } from '../components/RunPanel.jsx'
+import RunPanel, { useRun } from '../components/RunPanel.jsx'
 import FixIt from '../components/FixIt.jsx'
 import FlagForm from '../components/FlagForm.jsx'
 import Icon from '../components/Icons.jsx'
@@ -148,14 +148,16 @@ function Scoring({ entry }) {
             <li key={field} className="flex items-center justify-between gap-2 text-xs">
               <span className="flex min-w-0 items-center gap-2">
                 <span
-                  className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border ${done ? 'border-success bg-success text-[color:var(--accent-contrast)]' : 'border-line-strong text-transparent'}`}
+                  className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border ${done ? 'border-success bg-success text-[color:rgb(var(--accent-contrast))]' : 'border-line-strong text-transparent'}`}
                   aria-hidden
                 >
                   <Icon name="check" size={9} strokeWidth={3} />
                 </span>
                 <span className={done ? 'text-fg' : 'text-fg-muted'}>{label}</span>
               </span>
-              <span className={`shrink-0 tabular-nums ${done ? 'font-medium text-success-text' : 'text-fg-subtle'}`}>+{points}</span>
+              <span className={`shrink-0 tabular-nums ${done ? 'font-medium text-success-text' : 'text-fg-subtle'}`}>
+                {points === 0 ? 'Free' : `+${points}`}
+              </span>
             </li>
           )
         })}
@@ -246,60 +248,92 @@ function BackgroundTab({ module, backTo }) {
   )
 }
 
-function ChallengeTab({ module, entry, runner }) {
+function ChallengeTab({ module, entry, runner, onOpenFixIt }) {
   return (
-    <div className="space-y-6">
-      {/* Mobile order is brief -> workspace -> hints/scoring. On desktop the brief
-          occupies row 1 and hints/scoring row 2 of the main column, while the
-          workspace rail spans both rows. That keeps both columns the same height
-          instead of leaving a hole under the shorter one. */}
-      <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_23rem] xl:items-start">
-        <div className="order-1 min-w-0 space-y-4 xl:col-start-1 xl:row-start-1">
-          <section className="card p-5">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-fg-subtle">Scenario</h2>
-            <p className="mt-1.5 text-[15px] leading-7 text-fg-muted">{module.overview}</p>
-            <div className="mt-4 rounded-lg border border-line bg-surface-2 p-3.5">
-              <h3 className="text-sm font-semibold text-fg">Your objective</h3>
-              <p className="mt-1 text-sm leading-6 text-fg-muted">{module.challenge}</p>
-            </div>
-          </section>
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
+      {/* Mobile reading order: scenario, objective and instructions, then the
+          live target, then the explanation of the flaw and its remediation. */}
+      <div className="order-1 min-w-0 space-y-4 xl:col-start-1 xl:row-start-1">
+        <section className="card p-5" aria-labelledby="scenario-heading">
+          <h2 id="scenario-heading" className="text-xs font-semibold uppercase tracking-[0.1em] text-fg-subtle">Scenario</h2>
+          <p className="mt-1.5 text-[15px] leading-7 text-fg-muted">{module.overview}</p>
+          <div className="mt-4 rounded-lg border border-line bg-surface-2 p-3.5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-fg">
+              <Icon name="target" size={15} className="text-fg-muted" />
+              Objective
+            </h3>
+            <p className="mt-1 text-sm leading-6 text-fg-muted">{module.challenge}</p>
+          </div>
+        </section>
 
-          <section className="card p-5">
-            <h2 className="text-sm font-semibold text-fg">Learning objectives</h2>
-            <div className="mt-2"><ReadList items={module.objectives} /></div>
-
-            {module.difficulty === 'Beginner' && module.guided_steps?.length > 0 && (
-              <>
-                <h2 className="mt-4 text-sm font-semibold text-fg">Suggested approach</h2>
-                <div className="mt-2"><ReadList ordered items={module.guided_steps} /></div>
-              </>
-            )}
-
-            <p className="mt-4 border-t border-line pt-3 text-sm leading-6 text-fg-subtle">
-              <span className="font-medium text-fg-muted">Expected outcome:</span> {module.expected_outcome}
+        <section className="card p-5" aria-labelledby="instructions-heading">
+          <h2 id="instructions-heading" className="text-sm font-semibold text-fg">Instructions</h2>
+          {module.guided_steps?.length > 0 ? (
+            <div className="mt-2"><ReadList ordered items={module.guided_steps} /></div>
+          ) : (
+            <p className="mt-2 text-sm leading-6 text-fg-muted">
+              Read the scenario, then use the target to test the mechanism. Every reply is the real lab response.
             </p>
-          </section>
-        </div>
+          )}
+          <p className="mt-4 border-t border-line pt-3 text-sm leading-6 text-fg-subtle">
+            Choose the <span className="font-medium text-fg-muted">vulnerable build</span> to exploit the flaw, then send the
+            same input to the <span className="font-medium text-fg-muted">secure build</span> to confirm the control blocks it.
+            Enter sends; Shift+Enter adds a line.
+          </p>
 
-        <aside className="order-2 min-w-0 space-y-4 xl:sticky xl:top-[7rem] xl:col-start-2 xl:row-span-2 xl:row-start-1">
-          <RunPanel module={module} runner={runner} />
-
-          <section className="card p-4" aria-labelledby="flag-heading">
-            <div className="flex items-start justify-between gap-2">
-              <h2 id="flag-heading" className="text-sm font-semibold text-fg">Submit the flag</h2>
-              <Badge tone={entry.flag ? 'success' : 'neutral'}>{entry.flag ? 'Captured' : 'Not captured'}</Badge>
-            </div>
-            <div className="mt-3"><FlagForm module={module} /></div>
-          </section>
-        </aside>
-
-        <div className="order-3 grid min-w-0 gap-4 sm:grid-cols-2 xl:col-start-1 xl:row-start-2">
-          <Hints module={module} />
-          <Scoring entry={entry} />
-        </div>
+          <h3 className="mt-4 text-sm font-semibold text-fg">Learning objectives</h3>
+          <div className="mt-2"><ReadList items={module.objectives} /></div>
+        </section>
       </div>
 
-      <RunResults module={module} runner={runner} />
+      <aside className="order-2 min-w-0 space-y-4 xl:sticky xl:top-[7rem] xl:col-start-2 xl:row-span-2 xl:row-start-1">
+        <RunPanel module={module} runner={runner} />
+
+        <section className="card p-4" aria-labelledby="flag-heading">
+          <div className="flex items-start justify-between gap-2">
+            <h2 id="flag-heading" className="text-sm font-semibold text-fg">Submit the flag</h2>
+            <Badge tone={entry.flag ? 'success' : 'neutral'}>{entry.flag ? 'Captured' : 'Not captured'}</Badge>
+          </div>
+          <div className="mt-3">
+            <FlagForm module={module} disabled={Boolean(entry.flag)} suggestion={runner.capturedFlag} />
+          </div>
+          {entry.flag && (
+            <p className="mt-2 text-xs leading-5 text-success-text">This flag is already recorded on your account.</p>
+          )}
+        </section>
+
+        <Hints module={module} />
+        <Scoring entry={entry} />
+      </aside>
+
+      <div className="order-3 grid min-w-0 gap-4 lg:grid-cols-2 xl:col-start-1 xl:row-start-2">
+        <section className="card p-5" aria-labelledby="explanation-heading">
+          <h2 id="explanation-heading" className="text-sm font-semibold text-fg">Explanation</h2>
+          <dl className="mt-3 space-y-3 text-sm">
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">Why it works</dt>
+              <dd className="mt-0.5 leading-6 text-fg-muted">{module.threat}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">Impact if exploited</dt>
+              <dd className="mt-0.5 leading-6 text-fg-muted">{module.impact}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">What a successful run proves</dt>
+              <dd className="mt-0.5 leading-6 text-fg-muted">{module.expected_outcome}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="card p-5" aria-labelledby="remediation-heading">
+          <h2 id="remediation-heading" className="text-sm font-semibold text-fg">Remediation</h2>
+          <p className="mt-2 text-sm leading-6 text-fg-muted">{module.remediation}</p>
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+            <Button size="sm" onClick={onOpenFixIt}>Practise the fix</Button>
+            <span className="text-xs text-fg-subtle">Replay the original attack against your own patch in Fix-It.</span>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
@@ -490,6 +524,13 @@ export default function Lab() {
           <Badge><Icon name="clock" size={12} /> {module.estimated_minutes} min</Badge>
           <Badge><Icon name="target" size={12} /> {LAB_MAX_POINTS} pts</Badge>
           <span className={`badge ${statusClass}`}>{statusLabel}</span>
+          <Link
+            to={`/courses/${courseSlugFor(module.id)}`}
+            className="badge badge-neutral transition-colors hover:text-accent-text"
+            aria-label={`${module.name} companion course`}
+          >
+            <Icon name="book" size={12} /> Companion course
+          </Link>
           {position > 0 && <span className="text-xs text-fg-subtle">Lab {position} of {effective.length}</span>}
         </div>
 
@@ -526,7 +567,7 @@ export default function Lab() {
       </div>
 
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="min-w-0">
-        {tab === 'challenge' && <ChallengeTab module={module} entry={entry} runner={runner} />}
+        {tab === 'challenge' && <ChallengeTab module={module} entry={entry} runner={runner} onOpenFixIt={() => setTab('fixit')} />}
         {tab === 'background' && <BackgroundTab module={module} backTo={backTo} />}
         {tab === 'fixit' && (
           <div className="space-y-4">

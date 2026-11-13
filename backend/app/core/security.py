@@ -26,6 +26,45 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class CSRFMiddleware(BaseHTTPMiddleware):
+    """Double-submit CSRF protection for cookie-authenticated writes.
+
+    Login, registration, refresh and password-reset are origin-checked but do
+    not require a pre-existing CSRF pair (there may be no session yet). Bearer
+    clients are exempt because the browser does not attach their credentials
+    automatically.
+    """
+
+    SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+    EXEMPT = {
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/refresh",
+        "/api/auth/csrf",
+        "/api/auth/password-reset",
+    }
+
+    async def dispatch(self, request, call_next):
+        from app.core import auth as auth_core
+
+        path = request.url.path
+        if request.method in self.SAFE_METHODS or not path.startswith("/api"):
+            return await call_next(request)
+        if not auth_core.origin_allowed(request):
+            return JSONResponse({"detail": "Cross-origin request rejected."}, status_code=403)
+        if path in self.EXEMPT:
+            return await call_next(request)
+        if request.headers.get("Authorization", "").startswith("Bearer "):
+            return await call_next(request)
+        if not auth_core.cookie_auth_present(request):
+            # Open local mode has no cookies, and unauthenticated writes will be
+            # rejected by the route dependency where authentication is enabled.
+            return await call_next(request)
+        if not auth_core.csrf_valid(request):
+            return JSONResponse({"detail": "Missing or invalid CSRF token. Refresh the page and retry."}, status_code=403)
+        return await call_next(request)
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, per_minute: int) -> None:
         super().__init__(app)

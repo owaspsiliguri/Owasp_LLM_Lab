@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
-import { isAuthEnabled } from '../services/supabase.js'
 import AuthShell from '../components/AuthShell.jsx'
 import Icon from '../components/Icons.jsx'
 
@@ -13,7 +12,7 @@ function destinationFrom(state) {
 }
 
 export default function Signup() {
-  const { signUp, session, loading } = useAuth()
+  const { enabled, signUp, user, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [fullName, setFullName] = useState('')
@@ -25,7 +24,7 @@ export default function Signup() {
   const [done, setDone] = useState(false)
 
   const redirectTo = destinationFrom(location.state)
-  if (isAuthEnabled() && !loading && session) return <Navigate to={redirectTo} replace />
+  if (enabled && !loading && user) return <Navigate to={redirectTo} replace />
 
   async function submit(event) {
     event.preventDefault()
@@ -65,13 +64,21 @@ export default function Signup() {
     </>
   )
 
-  if (!isAuthEnabled()) {
+  if (loading) {
     return (
-      <AuthShell title="Create an account" subtitle="This deployment has no account system attached, so the lab is open." footer={footer}>
+      <AuthShell title="Create an account" subtitle="Checking your session…">
+        <p role="status" className="text-sm leading-6 text-slate-600">Checking your session…</p>
+      </AuthShell>
+    )
+  }
+
+  if (!enabled) {
+    return (
+      <AuthShell title="Create an account" subtitle="This deployment has no identity provider attached, so the platform is open." footer={footer}>
         <p className="text-sm leading-6 text-slate-600">
-          Authentication is not configured here. Every lab runs in local mode and progress stays in this browser.
+          Authentication is not configured here. Labs and courses remain available, but progress cannot be saved without an account.
         </p>
-        <Link className="btn btn-primary mt-5 w-full" to="/">Continue in local mode</Link>
+        <Link className="btn btn-primary mt-5 w-full" to="/">Continue without an account</Link>
       </AuthShell>
     )
   }
@@ -82,7 +89,9 @@ export default function Signup() {
         <p className="text-sm leading-6 text-slate-600">
           We sent a confirmation link to <strong className="font-medium text-ink">{email}</strong>. Open it, then sign in.
         </p>
-        <p className="mt-2 text-xs text-slate-500">If the administrator disabled email confirmation in Supabase, you can sign in right away.</p>
+        <p className="mt-2 text-xs text-slate-500">
+          Your identity provider may ask you to confirm the address before the first sign-in.
+        </p>
         <Link className="btn btn-primary mt-5 w-full" to="/login" state={{ from: redirectTo }}>Go to sign in</Link>
       </AuthShell>
     )

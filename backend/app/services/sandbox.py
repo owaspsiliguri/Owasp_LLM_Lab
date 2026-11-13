@@ -4,10 +4,14 @@ from __future__ import annotations
 import ast
 import json
 import os
-import resource
 import subprocess
 import sys
 from pathlib import Path
+
+try:  # POSIX only; Windows has no resource module.
+    import resource
+except ImportError:  # pragma: no cover - platform switch
+    resource = None  # type: ignore[assignment]
 
 from app.config import get_settings
 
@@ -49,22 +53,40 @@ def static_check(code: str) -> str | None:
 
 
 def _limits() -> None:
-    resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
-    resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
-    resource.setrlimit(resource.RLIMIT_FSIZE, (1024 * 1024, 1024 * 1024))
-    os.setsid()
+    if resource is not None:
+        resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
+        resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
+        resource.setrlimit(resource.RLIMIT_FSIZE, (1024 * 1024, 1024 * 1024))
+    if hasattr(os, "setsid"):
+        os.setsid()
 
 
 def run(module_id: str, code: str) -> dict:
     err = static_check(code)
     if err:
         return {"passed": False, "error": err, "tests": []}
-    env = {"PATH": "/usr/bin:/bin", "PYTHONDONTWRITEBYTECODE": "1"}
+    env = {
+        "PATH": os.defpath,
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+    }
+    options: dict = {
+        "input": code,
+        "capture_output": True,
+        "text": True,
+        "env": env,
+        "cwd": str(BACKEND_DIR),
+        "timeout": get_settings().fixit_timeout_seconds,
+    }
+    if os.name == "nt":
+        # preexec_fn is POSIX-only. Windows relies on the wall-clock timeout
+        # (subprocess.run kills the child) instead of rlimits.
+        options["creationflags"] = subprocess.CREATE_NO_WINDOW
+    else:
+        options["preexec_fn"] = _limits  # noqa: PLW1509
     try:
         proc = subprocess.run(  # noqa: S603 - fixed argv, no shell, static-checked stdin
-            [sys.executable, "-E", "-s", str(HARNESS), module_id],
-            input=code, capture_output=True, text=True, env=env, cwd=str(BACKEND_DIR),
-            timeout=get_settings().fixit_timeout_seconds, preexec_fn=_limits,  # noqa: PLW1509
+            [sys.executable, "-E", "-s", str(HARNESS), module_id], **options
         )
     except subprocess.TimeoutExpired:
         return {"passed": False, "error": "Execution timed out. Check for infinite loops or catastrophic regular expressions.", "tests": []}

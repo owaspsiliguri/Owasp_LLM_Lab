@@ -14,8 +14,9 @@ import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import Profile from './pages/Profile.jsx'
 import Leaderboard from './pages/Leaderboard.jsx'
+import Courses from './pages/Courses.jsx'
+import Course from './pages/Course.jsx'
 import { useAuth } from './hooks/useAuth.jsx'
-import { isAuthEnabled } from './services/supabase.js'
 
 function SessionLoading() {
   return (
@@ -29,18 +30,21 @@ function SessionLoading() {
 }
 
 function Root() {
-  const { session, loading } = useAuth()
-  if (!isAuthEnabled()) return <Dashboard />
+  const { enabled, user, loading } = useAuth()
+  // Wait for /auth/config before deciding: the initial state is "disabled",
+  // so redirecting or showing Home first would flash the wrong page and, on a
+  // hard reload, strand an administrator who opened /admin directly.
   if (loading) return <SessionLoading />
-  return session ? <Dashboard /> : <Home />
+  if (!enabled) return <Dashboard />
+  return user ? <Dashboard /> : <Home />
 }
 
 function RequireAuth({ children }) {
-  const { session, loading } = useAuth()
+  const { enabled, user, loading } = useAuth()
   const location = useLocation()
-  if (!isAuthEnabled()) return children
   if (loading) return <SessionLoading />
-  if (!session) {
+  if (!enabled) return children
+  if (!user) {
     const from = `${location.pathname}${location.search}${location.hash}`
     return <Navigate to="/login" replace state={{ from }} />
   }
@@ -48,10 +52,10 @@ function RequireAuth({ children }) {
 }
 
 function RequireAdmin({ children }) {
-  const { session, profile, loading, profileLoading } = useAuth()
-  if (!isAuthEnabled()) return <Navigate to="/" replace />
-  if (loading || profileLoading) return <SessionLoading />
-  if (!session) return <Navigate to="/login" replace />
+  const { enabled, user, profile, loading } = useAuth()
+  if (loading) return <SessionLoading />
+  if (!enabled) return <Navigate to="/" replace />
+  if (!user) return <Navigate to="/login" replace />
   if (!profile || profile.role !== 'admin') return <Navigate to="/" replace />
   return children
 }
@@ -82,6 +86,8 @@ export default function App() {
         <Route path="labs" element={<RequireAuth><Labs /></RequireAuth>} />
         <Route path="labs/:id" element={<RequireAuth><Lab /></RequireAuth>} />
         <Route path="paths" element={<RequireAuth><Paths /></RequireAuth>} />
+        <Route path="courses" element={<Courses />} />
+        <Route path="courses/:slug" element={<Course />} />
         <Route path="progress" element={<RequireAuth><Progress /></RequireAuth>} />
         <Route path="profile" element={<RequireAuth><Profile /></RequireAuth>} />
         <Route path="leaderboard" element={<RequireAuth><Leaderboard /></RequireAuth>} />

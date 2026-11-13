@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,46 +8,43 @@ import { ProgressProvider } from '../hooks/useProgress.jsx'
 import Login from '../pages/Login.jsx'
 import Signup from '../pages/Signup.jsx'
 
-const mocks = vi.hoisted(() => ({
-  isAuthEnabled: vi.fn(() => true),
-  supabase: vi.fn(),
+const api = vi.hoisted(() => ({
+  authConfig: vi.fn(),
+  me: vi.fn(),
+  login: vi.fn(),
+  register: vi.fn(),
+  logout: vi.fn(),
+  modules: vi.fn(),
+  progress: vi.fn(),
+  stats: vi.fn(),
 }))
 
-vi.mock('../services/supabase.js', () => ({
-  isAuthEnabled: mocks.isAuthEnabled,
-  supabase: mocks.supabase,
+vi.mock('../services/api.js', () => ({
+  api,
+  setUnauthorizedHandler: vi.fn(),
+  ApiError: class ApiError extends Error {},
 }))
 
-// Minimal PostgREST-style thenable chain: select().eq()… resolves to nothing
-// interesting, maybeSingle() returns the profile.
-function chain(profile) {
-  const b = {}
-  const result = { data: [], error: null }
-  b.select = () => b
-  b.eq = () => b
-  b.order = () => b
-  b.limit = () => b
-  b.delete = () => b
-  b.upsert = () => Promise.resolve({ error: null })
-  b.maybeSingle = () => Promise.resolve({ data: profile, error: null })
-  b.then = (onF, onR) => Promise.resolve(result).then(onF, onR)
-  return b
+const MODULE = {
+  id: 'llm01', name: 'Prompt Injection', category: 'LLM01:2025 Prompt Injection', owasp_id: 'LLM01',
+  difficulty: 'Beginner', estimated_minutes: 20, prerequisites: ['HTTP'], overview: 'Overview text',
+  challenge: 'Capture the flag', objectives: ['Obj A'],
 }
 
-function makeClient({ session = null, profile = null, signInError = null } = {}) {
-  return {
-    auth: {
-      getSession: vi.fn(async () => ({ data: { session } })),
-      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
-      signInWithPassword: vi.fn(async () => (signInError ? { error: { message: signInError } } : { error: null, data: { session } })),
-      signUp: vi.fn(async () => ({ error: null, data: { session: null, user: {} } })),
-      signOut: vi.fn(async () => ({ error: null })),
-    },
-    from: vi.fn(() => chain(profile)),
-  }
-}
+const STUDENT = { id: 'user-1', email: 'student@example.com', full_name: '', role: 'student', created_at: '2026-01-01T00:00:00Z' }
+const ADMIN = { ...STUDENT, id: 'admin-1', email: 'admin@example.com', role: 'admin' }
 
-const session = { access_token: 'token', user: { id: 'user-1', email: 'student@example.com' } }
+beforeEach(() => {
+  vi.resetAllMocks()
+  api.authConfig.mockResolvedValue({ enabled: true, registration: true, mode: 'local' })
+  api.me.mockResolvedValue({ user: null })
+  api.login.mockResolvedValue({ user: STUDENT })
+  api.register.mockResolvedValue({ user: null, needs_confirmation: true })
+  api.logout.mockResolvedValue({ ok: true })
+  api.modules.mockResolvedValue([MODULE])
+  api.progress.mockResolvedValue({ modules: {}, courses: {} })
+  api.stats.mockResolvedValue({ labs: 1, minutes: 20, owasp_categories: 1, difficulty: { Beginner: 1 } })
+})
 
 function renderApp(path = '/') {
   return render(
@@ -61,159 +58,146 @@ function renderApp(path = '/') {
   )
 }
 
-beforeEach(() => {
-  mocks.isAuthEnabled.mockReturnValue(true)
-  mocks.supabase.mockReset()
-})
+function renderAuthPage(Page, path) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <AuthProvider>
+        <Routes>
+          <Route path={path} element={<Page />} />
+          <Route path="/" element={<p>Signed in destination</p>} />
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>,
+  )
+}
 
 describe('route guards', () => {
   it('redirects signed-out visitors to the login page', async () => {
-    mocks.supabase.mockReturnValue(makeClient({ session: null }))
     renderApp('/labs')
+
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Create an account' })).toBeInTheDocument()
   })
 
-  it('lets signed-in students through and shows their identity', async () => {
-    mocks.supabase.mockReturnValue(makeClient({ session, profile: { id: 'user-1', email: 'student@example.com', role: 'student' } }))
+  it('restores a cookie session from /auth/me without browser tokens', async () => {
+    api.me.mockResolvedValue({ user: STUDENT })
     renderApp('/')
-    expect(await screen.findByText('student@example.com')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument()
+
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Account menu' })).toBeInTheDocument()
+    expect((await screen.findAllByText('student@example.com')).length).toBeGreaterThan(0)
+    // Only cosmetic preferences (sidebar state) may be persisted. No token,
+    // session or progress data is ever written to browser storage.
+    const keys = Object.keys(localStorage)
+    expect(keys.filter((key) => /token|session|auth|progress|supabase/i.test(key))).toEqual([])
   })
 
-  it('shows the Admin nav entry only for administrators', async () => {
-    mocks.supabase.mockReturnValue(makeClient({ session, profile: { id: 'user-1', email: 'student@example.com', role: 'admin' } }))
+  it('shows the admin console entry only to administrators', async () => {
+    api.me.mockResolvedValue({ user: STUDENT })
+    const { unmount } = renderApp('/')
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Admin console' })).not.toBeInTheDocument()
+    unmount()
+
+    api.me.mockResolvedValue({ user: ADMIN })
     renderApp('/')
-    expect(await screen.findByRole('link', { name: 'Admin' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Admin console' })).toBeInTheDocument()
   })
 
+  it('revokes the server session on sign out and returns to the signed-out UI', async () => {
+    api.me.mockResolvedValue({ user: STUDENT })
+    const user = userEvent.setup()
+    renderApp('/')
+
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: 'Sign out' }))
+
+    await waitFor(() => expect(api.logout).toHaveBeenCalledTimes(1))
+    expect((await screen.findAllByRole('link', { name: 'Sign in' })).length).toBeGreaterThan(0)
+  })
 })
 
 describe('login page', () => {
-  function renderLogin() {
-    return render(
-      <MemoryRouter initialEntries={['/login']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<p>Welcome back</p>} />
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>,
-    )
-  }
-
-  it('validates the form before calling Supabase', async () => {
-    const client = makeClient()
-    mocks.supabase.mockReturnValue(client)
+  it('validates the form before calling the API', async () => {
     const user = userEvent.setup()
-    renderLogin()
+    renderAuthPage(Login, '/login')
+
+    await screen.findByLabelText('Email')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
     expect(await screen.findByRole('alert')).toHaveTextContent('Enter a valid email address.')
-    expect(client.auth.signInWithPassword).not.toHaveBeenCalled()
+    expect(api.login).not.toHaveBeenCalled()
   })
 
-  it('signs in and navigates to the requested page', async () => {
-    const client = makeClient({ session: null }) // no session until signInWithPassword succeeds
-    mocks.supabase.mockReturnValue(client)
+  it('signs in through the auth endpoint and navigates to the destination', async () => {
     const user = userEvent.setup()
-    renderLogin()
-    await user.type(screen.getByLabelText('Email'), 'student@example.com')
+    renderAuthPage(Login, '/login')
+
+    await screen.findByLabelText('Email')
+    await user.type(screen.getByLabelText('Email'), ' student@example.com ')
     await user.type(screen.getByLabelText('Password'), 'correct-horse')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
-    expect(await screen.findByText('Welcome back')).toBeInTheDocument()
-    expect(client.auth.signInWithPassword).toHaveBeenCalledWith({ email: 'student@example.com', password: 'correct-horse' })
+
+    expect(await screen.findByText('Signed in destination')).toBeInTheDocument()
+    expect(api.login).toHaveBeenCalledWith('student@example.com', 'correct-horse')
   })
 
-  it('surfaces Supabase authentication errors', async () => {
-    mocks.supabase.mockReturnValue(makeClient({ signInError: 'Invalid login credentials' }))
+  it('surfaces backend authentication errors', async () => {
+    api.login.mockRejectedValue(new Error('Invalid email or password.'))
     const user = userEvent.setup()
-    renderLogin()
+    renderAuthPage(Login, '/login')
+
+    await screen.findByLabelText('Email')
     await user.type(screen.getByLabelText('Email'), 'student@example.com')
     await user.type(screen.getByLabelText('Password'), 'wrong-password')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid login credentials')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid email or password.')
   })
 })
 
 describe('signup page', () => {
-  function renderSignup() {
-    return render(
-      <MemoryRouter initialEntries={['/signup']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/" element={<p>Dashboard</p>} />
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>,
-    )
-  }
-
-  it('enforces password rules and confirmation', async () => {
-    const client = makeClient()
-    mocks.supabase.mockReturnValue(client)
+  it('enforces the password rules before calling the API', async () => {
     const user = userEvent.setup()
-    renderSignup()
+    renderAuthPage(Signup, '/signup')
+
+    await screen.findByLabelText('Email')
     await user.type(screen.getByLabelText('Email'), 'new@example.com')
     await user.type(screen.getByLabelText(/^Password/), 'short')
     await user.type(screen.getByLabelText('Confirm password'), 'short')
     await user.click(screen.getByRole('button', { name: 'Create account' }))
+
     expect(await screen.findByRole('alert')).toHaveTextContent('Password must be at least 8 characters.')
-    expect(client.auth.signUp).not.toHaveBeenCalled()
+    expect(api.register).not.toHaveBeenCalled()
   })
 
-  it('creates the account with the display name and asks for email confirmation', async () => {
-    const client = makeClient()
-    mocks.supabase.mockReturnValue(client)
+  it('registers with the display name and asks for email confirmation', async () => {
     const user = userEvent.setup()
-    renderSignup()
-    await user.type(screen.getByLabelText('Full name'), 'Ada Lovelace')
+    renderAuthPage(Signup, '/signup')
+
+    await screen.findByLabelText('Email')
+    await user.type(screen.getByLabelText(/^Full name/), 'Ada Lovelace')
     await user.type(screen.getByLabelText('Email'), 'new@example.com')
     await user.type(screen.getByLabelText(/^Password/), 'correct-horse')
     await user.type(screen.getByLabelText('Confirm password'), 'correct-horse')
     await user.click(screen.getByRole('button', { name: 'Create account' }))
+
     expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument()
-    expect(client.auth.signUp).toHaveBeenCalledWith({
+    expect(api.register).toHaveBeenCalledWith({
       email: 'new@example.com',
       password: 'correct-horse',
-      options: { data: { full_name: 'Ada Lovelace' } },
+      fullName: 'Ada Lovelace',
     })
   })
 })
 
-describe('local mode fallback', () => {
-  it('keeps the app open when Supabase is not configured', async () => {
-    mocks.isAuthEnabled.mockReturnValue(false)
-    mocks.supabase.mockReturnValue(null)
-    render(
-      <MemoryRouter initialEntries={['/login']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<p>Local dashboard</p>} />
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>,
-    )
-    expect(await screen.findByRole('link', { name: 'Continue in local mode' })).toBeInTheDocument()
-  })
-})
+describe('open mode', () => {
+  it('keeps the platform usable when authentication is not configured', async () => {
+    api.authConfig.mockResolvedValue({ enabled: false, registration: false, mode: 'open' })
+    renderAuthPage(Login, '/login')
 
-describe('token plumbing', () => {
-  it('attaches the bearer token to lab API calls after sign-in', async () => {
-    const client = makeClient({ session, profile: { id: 'user-1', email: 'student@example.com', role: 'student' } })
-    mocks.supabase.mockReturnValue(client)
-    const fetchSpy = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true }) }))
-    globalThis.fetch = fetchSpy
-    const { api } = await import('../services/api.js')
-    const { setAuthToken } = await import('../services/api.js')
-    setAuthToken('abc123')
-    await api.health()
-    expect(fetchSpy).toHaveBeenCalledWith('/api/health', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer abc123' }) }))
-    setAuthToken(null)
-    await api.health()
-    expect(fetchSpy.mock.calls.at(-1)[1].headers.Authorization).toBeUndefined()
+    expect(await screen.findByRole('link', { name: 'Continue without an account' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
+    expect(api.me).not.toHaveBeenCalled()
   })
 })

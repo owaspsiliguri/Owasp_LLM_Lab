@@ -7,6 +7,7 @@ import Button from './Button.jsx'
  */
 export default function Dialog({
   open, onClose, title, description, children, footer, tone = 'neutral', labelledBy = 'dialog-title',
+  panelClassName = 'max-w-md',
 }) {
   const panelRef = useRef(null)
   const restoreRef = useRef(null)
@@ -66,7 +67,7 @@ export default function Dialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className="relative w-full max-w-md animate-pop-in rounded-xl border border-line-strong bg-surface p-5 shadow-drawer"
+        className={`relative w-full ${panelClassName} animate-pop-in rounded-xl border border-line-strong bg-surface p-5 shadow-drawer`}
       >
         <h2 id={labelledBy} className="text-base font-semibold text-fg">{title}</h2>
         {description && <p className="mt-1.5 text-sm leading-6 text-fg-muted">{description}</p>}

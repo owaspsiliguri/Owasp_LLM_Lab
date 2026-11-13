@@ -9,14 +9,21 @@ def validate(client, mid, code):
     return r.json()
 
 
-@pytest.mark.parametrize("mid", ["llm01", "llm02", "llm10", "llm03", "llm04", "llm06", "llm09", "llm05", "llm07", "llm08"])
+ALL_LABS = [
+    "llm01", "llm02", "llm10", "llm03", "llm04", "llm06", "llm09", "llm05",
+    "llm07", "llm08", "llm11", "llm12", "llm13", "llm14", "llm15", "llm16",
+    "llm17", "llm18", "llm19", "llm20", "llm21", "llm22",
+]
+
+
+@pytest.mark.parametrize("mid", ALL_LABS)
 def test_starter_code_fails(client, mid):
     starter = client.get(f"/api/modules/{mid}").json()["fixit"]["starter_code"]
     res = validate(client, mid, starter)
     assert res["passed"] is False and any(not t["passed"] for t in res["tests"])
 
 
-@pytest.mark.parametrize("mid", ["llm01", "llm02", "llm10", "llm03", "llm04", "llm06", "llm09", "llm05", "llm07", "llm08"])
+@pytest.mark.parametrize("mid", ALL_LABS)
 def test_reference_solution_passes(client, mid):
     res = validate(client, mid, SOLUTIONS[mid])
     assert res["passed"] is True, res

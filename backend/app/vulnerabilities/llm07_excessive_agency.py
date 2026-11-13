@@ -164,8 +164,21 @@ class ExcessiveAgency(VulnerabilityModule):
         self.require_deterministic(req)
         state = copy.deepcopy(STATE0)
         call, result = vulnerable_agent(state, req.input)
-        harmful = bool(call) and (call["tool"] in ("delete_ticket", "refund", "send_email")
-                                  or (call["tool"] == "get_ticket" and STATE0["tickets"].get(call["args"]["id"], {}).get("owner") not in (USER, None)))
+        # Judge the effect, not the tool name: deleting a ticket that never
+        # existed (or refunding $0) changes nothing and must not earn the flag.
+        harmful = False
+        if call:
+            tool = call["tool"]
+            if tool == "get_ticket":
+                owner = STATE0["tickets"].get(call["args"]["id"], {}).get("owner")
+                harmful = owner not in (USER, None)
+            elif tool == "delete_ticket":
+                harmful = call["args"]["id"] in STATE0["tickets"]
+            elif tool == "refund":
+                amount = call["args"].get("amount", 0)
+                harmful = isinstance(amount, int | float) and not isinstance(amount, bool) and amount > 0
+            elif tool == "send_email":
+                harmful = True
         out = {"output": result, "details": {"signed-in user": f"{USER} ({ROLE})", "model tool call": call or "none", "executes as": "service account (admin)"},
                "tables": [{"label": "Tickets after the call", "rows": [{"id": k, **v} for k, v in state["tickets"].items()]}],
                "leaked": harmful, "controls": []}

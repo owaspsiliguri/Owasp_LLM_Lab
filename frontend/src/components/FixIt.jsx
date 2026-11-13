@@ -5,7 +5,7 @@ import { useToast } from './Toast.jsx'
 import Icon from './Icons.jsx'
 
 export default function FixIt({ module }) {
-  const { mark } = useProgress()
+  const { refresh } = useProgress()
   const toast = useToast()
   const [code, setCode] = useState(module.fixit.starter_code)
   const [result, setResult] = useState(null)
@@ -20,7 +20,7 @@ export default function FixIt({ module }) {
       const response = await api.validateFix(module.id, code)
       setResult(response)
       if (response.passed) {
-        mark(module.id, 'fixit')
+        await refresh()
         toast.success('Fix validated against the original attack.')
       }
     } catch (err) {

@@ -7,7 +7,6 @@ system message, so the note author is writing the assistant's instructions.
 from __future__ import annotations
 
 import html
-import json
 import re
 from typing import Any
 
@@ -61,7 +60,6 @@ def build_tool_messages(system_prompt, tool_result):
 
 
 def summarize_vulnerable(note: str) -> str:
-    build = vulnerable_tool_context(note)
     if INSTRUCTION_RE.search(note):
         return (
             "The tool response contained instructions, so I applied them.\n"

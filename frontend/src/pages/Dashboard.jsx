@@ -31,7 +31,7 @@ function StatusBadge({ entry }) {
 }
 
 export default function Dashboard() {
-  const { profile, session } = useAuth()
+  const { profile, user } = useAuth()
   const { modules, loading, error, errorKind, reload } = useModules()
   const progress = useProgress()
 
@@ -41,7 +41,7 @@ export default function Dashboard() {
   const recent = recentLabs(modules, progress, 4)
   const remaining = modules.filter((module) => labStatus(progress.modules[module.id] || {}) !== 'completed')
   const recommended = remaining.slice(0, 3)
-  const name = (profile?.full_name || session?.user?.email || '').split(/[\s@]/)[0]
+  const name = (profile?.full_name || user?.email || '').split(/[\s@]/)[0]
 
   return (
     <div className="space-y-7">
@@ -69,7 +69,7 @@ export default function Dashboard() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 id="progress-heading" className="text-base font-semibold text-ink">Learning progress</h2>
-              <p className="mt-0.5 text-sm text-slate-500">One point for each stage of each lab.</p>
+              <p className="mt-0.5 text-sm text-slate-500">Score comes from captured flags and validated fixes.</p>
             </div>
             <span className="text-2xl font-semibold tracking-tight text-ink">{summary.percent}%</span>
           </div>

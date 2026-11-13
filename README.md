@@ -33,12 +33,13 @@ Existing resources cover agentic AI, scanner benchmarking, CTF games and standar
 |---|---|
 | 🏴 **Real vulnerable labs, not demos** | Real prompt-channel concatenation, real SQLite injection, real HTML rendering in a sandboxed iframe, real ChromaDB poisoning, a real resource-limited Fix-It sandbox |
 | 📈 **Four difficulty tiers** | Every module carries one of four levels: **Beginner**, **Intermediate**, **Advanced** or **Expert**. No mode buttons, no stripping guidance — the difficulty lives on the lab. |
-| 🤖 **Groq + Gemini engines** | Set a key and labs run on a real LLM — server-side only, no engine picker in the UI. No key? The deterministic simulator keeps everything reproducible and free |
+| 🤖 **Groq + Gemini engines** | Set a key and the chat labs run on a real LLM — server-side only, no engine picker in the UI. No key? The deterministic simulator keeps everything reproducible and free |
 | ⚖️ **Independent LLM judge** | A second, separate model grades whether a real-model run actually leaked the secret and reviews failing Fix-It code — with transparent cross-provider fallback |
-| 🔐 **Accounts, admin, cloud progress** | Supabase Auth sign-up/sign-in, per-user cloud progress, session-gated lab API, and an admin console for `owaspsiliguri@gmail.com` (roster, completion, flags, forged-proof audit log) |
+| 🔐 **Accounts, admin, server-owned progress** | Backend-issued JWT cookies, rotating refresh sessions, CSRF protection, per-user progress, an admin console for the configured administrator, and a public course catalogue |
+| 📚 **Companion courses** | One seeded Markdown course per lab, linked from the lab page and the learning paths. Administrators can upload, edit and publish more courses in the Admin console |
 | 🧪 **Fix It sandbox** | Submitted remediation code runs in a resource-limited subprocess against deterministic attack replays — including a canary-leak regression check |
 | 📖 **Guided end-to-end** | Complete walkthrough, vulnerability background, vulnerable + secure source and the Fix-It brief are all rendered **inside the lab page** — no GitHub hand-offs, no external docs |
-| 🛡️ **Hardened by default** | HMAC per-installation flags (never hardcoded), RLS on every Supabase table, server-side re-validation before any achievement, output redaction so a benign "hi" can never hand you a flag |
+| 🛡️ **Hardened by default** | HMAC per-installation flags (never hardcoded), backend-enforced scoring, HttpOnly/SameSite cookies, CSRF double submit, RLS read-only progress, output redaction so a benign "hi" can never hand you a flag |
 
 ---
 
@@ -86,10 +87,11 @@ Every lab ships **vulnerable + secure implementations rendered from the real sou
 |--------|-------|
 | Labs | **22** |
 | Difficulty tiers | **4** — Beginner · Intermediate · Advanced · Expert |
-| Points per lab | **260** (10 run + 100 flag + 150 fix-it) |
-| Maximum points | **5,720** |
+| Points per lab | **250** (100 flag + 150 fix-it; explore, hints, navigation and chat award 0) |
+| Maximum points | **5,500** |
 | Estimated practice | **~11 hours** (675 minutes) |
 | OWASP risk categories | **10** — mapped to the 2025 list |
+| Companion courses | **22** — one per lab, plus any administrator-authored courses |
 
 ---
 
@@ -98,10 +100,19 @@ Every lab ships **vulnerable + secure implementations rendered from the real sou
 ```bash
 git clone https://github.com/owaspsiliguri/Owasp_LLM_Lab.git
 cd Owasp_LLM_Lab
+cp .env.example .env
 docker compose up --build
 ```
 
 Open **http://localhost:8080** — labs run key-free on the built-in simulator immediately.
+
+**Want accounts and saved progress locally?** Uncomment `JWT_SECRET`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` (and keep `COOKIE_SECURE=0` for local HTTP), then restart:
+
+```bash
+docker compose up -d --build
+```
+
+Sign in with the administrator you configured. Students can also create their own accounts; progress is stored in the backend's local SQLite database, not in the browser.
 
 **Want real models?** Add a key (Groq and/or Gemini) to `.env` and restart — the server picks the engine, the independent judge comes online, and the Dashboard shows engine status:
 
@@ -121,42 +132,61 @@ Everything has a free tier and the guide assumes zero deployment experience:
 
 **[docs/Deployment_Guide.md](docs/Deployment_Guide.md)** — step by step:
 
-1. **Supabase** — create the project, run [`supabase/schema.sql`](supabase/schema.sql)
-2. **Render** — deploy the FastAPI backend (`backend/`, root directory + start command provided), set the Supabase env vars
-3. **Vercel** — deploy the React frontend (`frontend/` root directory), set `VITE_*` env vars
-4. **Connect** — set `CORS_ORIGINS` on Render to your Vercel URL
-5. **Verify** — a 10-point checklist exercising sign-up, progress, flags, the admin console and persistence
+1. **Supabase** — create the project, run [`supabase/schema.sql`](supabase/schema.sql), then the additive [`20261111_platform_upgrade.sql`](supabase/migrations/20261111_platform_upgrade.sql) migration. Existing users and progress are preserved.
+2. **Render** — deploy the FastAPI backend (`backend/`, root directory + start command provided). Set `JWT_SECRET`, the Supabase keys, `ADMIN_EMAIL`, `COOKIE_SECURE=1` and `CORS_ORIGINS`.
+3. **Vercel** — deploy the React frontend (`frontend/` root directory). Proxy `/api/*` to Render from the same Vercel origin (or use same-site custom domains) so the HttpOnly cookies are sent.
+4. **Seed courses** — run `python scripts/seed_courses.py --allow-remote` once with the production Supabase environment, after checking the target.
+5. **Verify** — a checklist covering sign-up, server progress, the 100/150/250 scoring, the admin console, course editing and persistence.
 
-Result: a public site where students sign up, work the labs and keep their progress, and administrators watch completion in the Admin console.
+Result: a public site where students sign up, work the labs and keep their progress, administrators watch completion and author courses, and every achievement is validated by the backend.
 
 ---
 
 ## 🏗️ Architecture
 
 ```text
-Local mode:                          Deployed mode:
-React UI (nginx) ──▶ FastAPI          React UI (Vercel) ─▶ FastAPI (Render) ─▶ Supabase (auth + data)
-                      │                           │
-                      └──▶ ChromaDB               └──▶ Groq / Gemini (real-model engine + judge)
+Local mode:
+React UI (nginx) ──▶ FastAPI ──▶ SQLite (platform.db)
+                         └─────▶ ChromaDB (RAG labs)
+
+Deployed mode:
+React UI (Vercel) ──/api rewrite──▶ FastAPI (Render) ──▶ Supabase Postgres + GoTrue
+                                          └────────────▶ Groq / Gemini (real-model engine + judge)
 ```
+
+The browser never holds an access token, a refresh token or Supabase keys. The API issues an HttpOnly access cookie and a rotating HttpOnly refresh cookie; a readable CSRF cookie is mirrored in `X-CSRF-Token` for state-changing requests. Cookie authentication requires the frontend and API to be **same-origin** (a Vercel `/api` rewrite) or **same-site** (custom domains under one registrable domain).
 
 ---
 
 ## 🛠️ Development
 
 ```bash
-python -m venv .venv && . .venv/bin/activate
+python -m venv .venv
+. .venv/bin/activate                 # Windows: .venv\Scripts\activate
 pip install -r backend/requirements-dev.txt
-pytest                              # Linux/macOS; Windows: bash scripts/test_backend_docker.sh
+pytest -q tests/backend              # Linux, macOS and Windows
 ruff check backend tests
-cd frontend && npm ci && npm test && npm run lint && npm run build
-python scripts/gen_guides.py        # regenerate labs/guided/*.md after editing a module
+cd frontend && npm ci && npm test -- --run && npm run lint && npm run build
+python scripts/gen_guides.py         # regenerate labs/guided/*.md after editing a module
+python scripts/seed_courses.py       # create the 22 companion courses locally (idempotent)
 bash scripts/audit_free_flags_docker.sh   # prove no lab leaks its flag on a benign input
 ```
 
+**Local API and UI:**
+
+```bash
+# terminal 1, from backend/
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# terminal 2, from frontend/
+npm run dev -- --host 127.0.0.1       # proxies /api to http://127.0.0.1:8000
+```
+
+`VITE_PROXY_TARGET` overrides the proxy target. The default is the IPv4 literal `127.0.0.1` because Windows can resolve `localhost` to `::1`.
+
 **Test matrix:** backend unit, security and infrastructure suites under `tests/`, plus the frontend Vitest suite. CI runs lint, tests, Docker builds and dependency scans.
 
-Environment: copy `.env.example` to `.env`. Frontend variables for local Supabase login go in `frontend/.env.local` (git-ignored) — see [docs/Deployment_Guide.md](docs/Deployment_Guide.md#running-the-same-stack-locally).
+**Environment:** copy `.env.example` to `.env`. Do not put Supabase keys in the frontend: browser auth and data access go through the API. Optional frontend overrides live in `frontend/.env.local` (git-ignored). See [docs/Deployment_Guide.md](docs/Deployment_Guide.md#running-the-same-stack-locally).
 
 ---
 

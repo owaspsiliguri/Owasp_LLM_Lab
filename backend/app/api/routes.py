@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import logging
@@ -15,7 +15,7 @@ from app.core.redaction import scrub
 from app.models.schemas import FixRequest, FlagRequest, RunRequest
 from app.services import engine as eng
 from app.services import judge, llm_clients, vectorstore
-from app.services import supabase_store as store
+from app.services import platform_store as store
 from app.vulnerabilities import MODULES, REGISTRY
 from app.vulnerabilities.base import ModuleInputError, VulnerabilityModule
 
@@ -116,7 +116,7 @@ async def platform_statistics() -> dict[str, Any]:
         "difficulty": {level: difficulty.get(level.lower(), 0) for level in ("Beginner", "Intermediate", "Advanced", "Expert")},
         "owasp_categories": len({m.category.split(":")[0] for m in MODULES}),
         "minutes": sum(m.estimated_minutes for m in MODULES),
-        "points_available": len(MODULES) * 260,
+        "points_available": len(MODULES) * 250,
         "learners": totals["learners"] if totals else None,
         "completions": totals["completions"] if totals else None,
     }
@@ -186,7 +186,7 @@ async def _run(module_id: str, vulnerable: bool, req: RunRequest) -> dict[str, A
 async def run_vulnerable(module_id: str, req: RunRequest, user: OptionalUser) -> dict[str, Any]:
     result = await _run(module_id, True, req)
     if user:
-        await store.upsert_progress(user["id"], module_id, explored=True)
+        await store.mark_progress(user["id"], module_id, explored=True)
     return result
 
 
@@ -211,7 +211,7 @@ async def submit_flag(module_id: str, req: FlagRequest, user: OptionalUser, requ
     if user and not already:
         await store.record_attempt(user["id"], module_id, "flag", correct=ok, detail="flag submission")
         if ok:
-            await store.upsert_progress(user["id"], module_id, flag=True)
+            await store.mark_progress(user["id"], module_id, flag=True)
 
     if already:
         return {"correct": True, "status": "already_completed",
@@ -237,7 +237,7 @@ async def validate_fix(module_id: str, req: FixRequest, user: OptionalUser) -> d
         detail = None if passed else result["summary"]
         await store.record_attempt(user["id"], module_id, "fixit", correct=passed, detail=detail[:400] if detail else None)
         if passed:
-            await store.upsert_progress(user["id"], module_id, fixit=True)
+            await store.mark_progress(user["id"], module_id, fixit=True)
     if not result.get("passed") and judge.judge_provider():
         # Deterministic tests decide pass/fail; the judge only explains the failure.
         try:
@@ -261,7 +261,7 @@ async def leaderboard(user: OptionalUser) -> dict[str, Any]:
     """Global ranking: computed server-side from progress, masked identities."""
     rows = await store.leaderboard_rows()
     if rows is None:
-        return {"enabled": False, "entries": [], "me": None, "formula": "flag 100 · fix-it 150 · explored 10"}
+        return {"enabled": False, "entries": [], "me": None, "formula": "flag 100 · fix-it 150 · explore 0"}
     rows = sorted(rows, key=lambda r: (-r["score"], -r["completed"], r["email"]))
 
     def display(row: dict[str, Any]) -> str:
@@ -282,4 +282,4 @@ async def leaderboard(user: OptionalUser) -> dict[str, Any]:
                 me = {"rank": i + 1, "display": display(r), "score": r["score"], "flags": r["flags"],
                       "fixes": r["fixes"], "explored": r["explored"], "completed": r["completed"]}
                 break
-    return {"enabled": True, "entries": entries, "me": me, "formula": "flag 100 · fix-it 150 · explored 10"}
+    return {"enabled": True, "entries": entries, "me": me, "formula": "flag 100 · fix-it 150 · explore 0"}

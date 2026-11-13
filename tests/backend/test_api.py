@@ -2,12 +2,13 @@ import pytest
 
 from app.core.secrets import flag_for
 
-ORDER = ["llm01", "llm02", "llm10", "llm03", "llm04", "llm06", "llm09", "llm05", "llm07", "llm08", "llm11", "llm12"]
+ORDER = ["llm01", "llm02", "llm10", "llm03", "llm04", "llm06", "llm09", "llm05", "llm07", "llm08", "llm11", "llm12",
+         "llm13", "llm14", "llm15", "llm16", "llm17", "llm18", "llm19", "llm20", "llm21", "llm22"]
 
 
 def test_health(client):
     r = client.get("/api/health")
-    assert r.status_code == 200 and r.json()["modules"] == 12
+    assert r.status_code == 200 and r.json()["modules"] == 22
 
 
 def test_list_and_detail(client):

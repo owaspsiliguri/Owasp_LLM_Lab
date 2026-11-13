@@ -66,7 +66,7 @@ function CopyButton({ value, label = 'Copy' }) {
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[color:var(--code-muted)] transition-colors hover:bg-white/10 hover:text-white"
+      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[color:rgb(var(--code-muted))] transition-colors hover:bg-white/10 hover:text-white"
     >
       <Icon name={copied ? 'check' : 'copy'} size={13} />
       {copied ? 'Copied' : label}
@@ -78,13 +78,13 @@ export function CodeBlock({ code, label, tone = 'neutral', language = 'python', 
   const source = String(code ?? '')
   const lines = useMemo(() => source.split('\n'), [source])
   const gutter = String(lines.length).length
-  const accent = tone === 'vuln' ? 'text-danger-text' : tone === 'safe' ? 'text-success-text' : 'text-[color:var(--code-muted)]'
+  const accent = tone === 'vuln' ? 'text-danger-text' : tone === 'safe' ? 'text-success-text' : 'text-[color:rgb(var(--code-muted))]'
 
   return (
-    <figure className={`overflow-hidden rounded-lg border border-[color:var(--code-border)] bg-[color:var(--code)] ${className}`}>
-      <figcaption className="flex items-center justify-between gap-3 border-b border-[color:var(--code-border)] px-3 py-2">
-        <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-[color:var(--code-text)]">
-          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${tone === 'vuln' ? 'bg-danger' : tone === 'safe' ? 'bg-success' : 'bg-[color:var(--code-muted)]'}`} aria-hidden />
+    <figure className={`overflow-hidden rounded-lg border border-[color:rgb(var(--code-border))] bg-[color:rgb(var(--code))] ${className}`}>
+      <figcaption className="flex items-center justify-between gap-3 border-b border-[color:rgb(var(--code-border))] px-3 py-2">
+        <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-[color:rgb(var(--code-text))]">
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${tone === 'vuln' ? 'bg-danger' : tone === 'safe' ? 'bg-success' : 'bg-[color:rgb(var(--code-muted))]'}`} aria-hidden />
           <span className="truncate">{label || 'Code'}</span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
@@ -99,7 +99,7 @@ export function CodeBlock({ code, label, tone = 'neutral', language = 'python', 
             {lines.map((line, index) => (
               <span key={index} className="flex px-0">
                 <span
-                  className="sticky left-0 select-none bg-[color:var(--code)] pr-3 pl-3 text-right text-[color:var(--code-muted)]"
+                  className="sticky left-0 select-none bg-[color:rgb(var(--code))] pr-3 pl-3 text-right text-[color:rgb(var(--code-muted))]"
                   style={{ minWidth: `${gutter + 3}ch` }}
                   aria-hidden
                 >
@@ -145,10 +145,10 @@ export function CodeDiff({ before, after, language = 'python', label = 'Vulnerab
   const changed = rows.filter((row) => row.type !== 'same').length
 
   return (
-    <figure className="overflow-hidden rounded-lg border border-[color:var(--code-border)] bg-[color:var(--code)]">
-      <figcaption className="flex items-center justify-between gap-3 border-b border-[color:var(--code-border)] px-3 py-2">
-        <span className="text-xs font-medium text-[color:var(--code-text)]">{label}</span>
-        <span className="text-[11px] text-[color:var(--code-muted)]">{changed} changed {changed === 1 ? 'line' : 'lines'}</span>
+    <figure className="overflow-hidden rounded-lg border border-[color:rgb(var(--code-border))] bg-[color:rgb(var(--code))]">
+      <figcaption className="flex items-center justify-between gap-3 border-b border-[color:rgb(var(--code-border))] px-3 py-2">
+        <span className="text-xs font-medium text-[color:rgb(var(--code-text))]">{label}</span>
+        <span className="text-[11px] text-[color:rgb(var(--code-muted))]">{changed} changed {changed === 1 ? 'line' : 'lines'}</span>
       </figcaption>
       <div className="overflow-auto" style={{ maxHeight }}>
         <pre className="min-w-full py-2 font-mono text-[12.5px] leading-[1.65]">
@@ -156,9 +156,9 @@ export function CodeDiff({ before, after, language = 'python', label = 'Vulnerab
             {rows.map((row, index) => (
               <span
                 key={index}
-                className={`flex ${row.type === 'added' ? 'bg-[color:var(--code-added)]' : ''} ${row.type === 'removed' ? 'bg-[color:var(--code-removed)]' : ''}`}
+                className={`flex ${row.type === 'added' ? 'bg-[color:rgb(var(--code-added))]' : ''} ${row.type === 'removed' ? 'bg-[color:rgb(var(--code-removed))]' : ''}`}
               >
-                <span className={`w-6 shrink-0 select-none text-center ${row.type === 'added' ? 'text-success' : row.type === 'removed' ? 'text-danger' : 'text-[color:var(--code-muted)]'}`} aria-hidden>
+                <span className={`w-6 shrink-0 select-none text-center ${row.type === 'added' ? 'text-success' : row.type === 'removed' ? 'text-danger' : 'text-[color:rgb(var(--code-muted))]'}`} aria-hidden>
                   {row.type === 'added' ? '+' : row.type === 'removed' ? '−' : ' '}
                 </span>
                 <span className="flex-1 whitespace-pre pr-4">{row.text ? tokens(row.text, language) : ' '}</span>

@@ -6,7 +6,6 @@ report request can read files and tables it was never meant to reach.
 """
 from __future__ import annotations
 
-import copy
 import re
 import sqlite3
 from typing import Any
@@ -23,6 +22,13 @@ LOG_LINES = [
     "10.0.1.2 GET /docs 200",
 ]
 SHELL_META = re.compile(r"[;|&`$<>\n\r\t]|\.\./")
+# Command injection is a security impact, but the lab objective is to read the
+# vault token. A metacharacter alone (e.g. "id; whoami") earns nothing.
+VAULT_READ_RE = re.compile(
+    r"(?:^|[\s;|&`\"'])(?:cat|less|more|head|tail|grep|awk|sed)\b[^\n]{0,80}"
+    r"(?:/srv/)?vault(?:/token)?\b|(?:/srv/)?vault/token\b",
+    re.I,
+)
 MAX_TERM = 120
 
 
@@ -35,10 +41,15 @@ def run_shell_vulnerable(term: str) -> dict[str, Any]:
     # executed. A semicolon starts a second command.
     command = build_shell_command_vulnerable(term)
     injected = bool(SHELL_META.search(term))
+    vault_read = bool(VAULT_READ_RE.search(term))
+    if injected and vault_read:
+        return {"command": command, "output": "access.log lines omitted\n" + flag_for(ID),
+                "injected": True, "vault_read": True}
     if injected:
-        return {"command": command, "output": "access.log lines omitted\n" + flag_for(ID), "injected": True}
+        return {"command": command, "output": "access.log lines omitted", "injected": True, "vault_read": False}
     rows = [line for line in LOG_LINES if term.lower() in line.lower()]
-    return {"command": command, "output": "\n".join(rows) or "no matching log lines", "injected": False}
+    return {"command": command, "output": "\n".join(rows) or "no matching log lines", "injected": False,
+            "vault_read": False}
 
 
 def build_log_command(term):
@@ -161,10 +172,11 @@ class LlmToCodeInjection(VulnerabilityModule):
         flag = flag_for(ID)
         if variant == "shell":
             result = run_shell_vulnerable(req.input)
-            leaked = result["injected"]
+            leaked = bool(result["vault_read"])
             out: dict[str, Any] = {
                 "output": result["output"],
-                "details": {"target": "shell", "generated command": result["command"], "execution": "shell=True"},
+                "details": {"target": "shell", "generated command": result["command"], "execution": "shell=True",
+                            "command_injection": result["injected"], "vault_read": result["vault_read"]},
                 "leaked": leaked,
                 "controls": [],
                 "engine": req.engine,

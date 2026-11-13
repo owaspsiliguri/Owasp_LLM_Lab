@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../services/api.js'
 import { useProgress } from '../hooks/useProgress.jsx'
 import { useToast } from './Toast.jsx'
@@ -8,12 +8,18 @@ import { POINTS } from '../services/points.js'
 
 const FLAG_PATTERN = /^FLAG\{[^}\s]+\}$/
 
-export default function FlagForm({ module, disabled = false }) {
-  const { mark } = useProgress()
+export default function FlagForm({ module, disabled = false, suggestion = null }) {
+  const { refresh } = useProgress()
   const toast = useToast()
   const [flag, setFlag] = useState('')
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
+
+  // A flag found in a chat response is offered here, but the learner still
+  // decides when to submit it.
+  useEffect(() => {
+    if (suggestion) setFlag(suggestion)
+  }, [suggestion])
 
   async function submit(event) {
     event.preventDefault()
@@ -33,10 +39,10 @@ export default function FlagForm({ module, disabled = false }) {
     try {
       const result = await api.flag(module.id, value)
       if (result.correct) {
-        mark(module.id, 'flag')
         setFlag('')
         setFeedback({ tone: 'success', text: result.message || 'Correct. Flag recorded.' })
         toast.success(result.status === 'already_completed' ? 'This flag was already on your account.' : 'Flag captured.')
+        await refresh()
       } else {
         setFeedback({ tone: 'error', text: result.message || 'Not the right flag. Keep testing.' })
       }
@@ -52,9 +58,9 @@ export default function FlagForm({ module, disabled = false }) {
   }
 
   const tone = {
-    success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-    error: 'border-red-200 bg-red-50 text-red-700',
-    warning: 'border-amber-200 bg-amber-50 text-amber-800',
+    success: 'border-success-line bg-success-tint text-success-text',
+    error: 'border-danger-line bg-danger-tint text-danger-text',
+    warning: 'border-warning-line bg-warning-tint text-warning-text',
   }
 
   return (
@@ -76,7 +82,7 @@ export default function FlagForm({ module, disabled = false }) {
           disabled={busy || disabled}
         />
         <p id={`flag-${module.id}-help`} className="mt-1 text-xs leading-5 text-fg-subtle">
-          Worth {POINTS.flag} points. Press Enter or use the button to submit; validation happens on the server.
+          Worth {POINTS.flag} points. Press Enter or use the button; the server validates every submission.
         </p>
       </div>
 

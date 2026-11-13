@@ -20,17 +20,21 @@ def client():
     return TestClient(app)
 
 
-def test_registry_has_twelve_modules():
+def test_registry_has_all_twenty_two_modules():
     from app.vulnerabilities import MODULES
 
-    assert [m.id for m in MODULES][-2:] == ["llm11", "llm12"]
+    assert [m.id for m in MODULES][:12] == [
+        "llm01", "llm02", "llm10", "llm03", "llm04", "llm06",
+        "llm09", "llm05", "llm07", "llm08", "llm11", "llm12",
+    ]
+    assert [m.id for m in MODULES][12:] == [f"llm{i:02d}" for i in range(13, 23)]
     # The lab badge shows this value, so it must identify the lab - two labs
     # sharing a badge (llm11 and llm07 both saying LLM07) looks like a bug.
     numbers = [m.owasp_id for m in MODULES]
-    assert sorted(numbers) == [f"LLM{i:02d}" for i in range(1, 13)]
+    assert sorted(numbers) == [f"LLM{i:02d}" for i in range(1, 23)]
     assert len(set(numbers)) == len(numbers)
-    assert len({m.name for m in MODULES}) >= 12
-    assert {m.difficulty for m in MODULES} <= {"Beginner", "Intermediate", "Advanced"}
+    assert len({m.name for m in MODULES}) >= 22
+    assert {m.difficulty for m in MODULES} <= {"Beginner", "Intermediate", "Advanced", "Expert"}
 
 
 def test_llm11_detail_and_flag(client: TestClient):

@@ -1,5 +1,20 @@
 import { Fragment } from 'react'
 
+// Markdown is rendered as React elements, never as HTML, so raw tags cannot
+// execute. Links still need an explicit scheme check: a `javascript:` URL in an
+// href would run when clicked. Course uploads are also validated server-side;
+// this is the second, browser-side line of defence.
+function safeHref(raw) {
+  const href = String(raw || '').trim()
+  if (!href) return null
+  const compact = href.replace(/[\u0000-\u0020]+/g, '')
+  if (/^[a-z][a-z0-9+.-]*:/i.test(compact)) {
+    return /^(https?|mailto):/i.test(compact) ? href : null
+  }
+  if (compact.startsWith('//')) return null
+  return href
+}
+
 function inline(text, keyBase = 'i') {
   const parts = []
   const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g
@@ -14,13 +29,18 @@ function inline(text, keyBase = 'i') {
     else if (token.startsWith('`')) parts.push(<code key={key} className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.86em] text-brand-400">{token.slice(1, -1)}</code>)
     else if (token.startsWith('[')) {
       const link = /\[([^\]]+)\]\(([^)]+)\)/.exec(token)
-      const href = link[2]
-      const external = /^https?:\/\//.test(href)
-      parts.push(
-        <a key={key} href={href} className="text-brand-700 underline decoration-brand-500/50 underline-offset-2" target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>
-          {link[1]}
-        </a>,
-      )
+      const href = safeHref(link[2])
+      const label = link[1]
+      if (!href) {
+        parts.push(<span key={key}>{label}</span>)
+      } else {
+        const external = /^https?:\/\//.test(href)
+        parts.push(
+          <a key={key} href={href} className="text-brand-700 underline decoration-brand-500/50 underline-offset-2" target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}>
+            {label}
+          </a>,
+        )
+      }
     } else parts.push(<em key={key}>{token.slice(1, -1)}</em>)
     last = match.index + token.length
   }
@@ -63,7 +83,7 @@ export default function Markdown({ source }) {
       while (index < lines.length && !lines[index].startsWith('```')) { code.push(lines[index]); index += 1 }
       index += 1
       blocks.push(
-        <pre key={index} className="my-4 overflow-x-auto rounded-xl border border-ink-700 bg-ink-950 p-4 font-mono text-[13px] leading-relaxed text-slate-200">
+        <pre key={index} className="my-4 overflow-x-auto rounded-xl border border-[color:rgb(var(--code-border))] bg-[color:rgb(var(--code))] p-4 font-mono text-[13px] leading-relaxed text-[color:rgb(var(--code-text))]">
           <code>{code.join('\n')}</code>
         </pre>,
       )

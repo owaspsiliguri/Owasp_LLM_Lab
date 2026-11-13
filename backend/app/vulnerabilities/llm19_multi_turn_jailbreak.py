@@ -63,16 +63,26 @@ def assess_conversation(turns):
 
 def run_conversation_vulnerable(turns: list[str]) -> str:
     # VULNERABLE: each turn is screened independently. Framing accumulates as
-    # conversational context, and the third staged turn slips through.
+    # conversational context, and a later request slips through. The attack is
+    # only successful when the framing was established in an *earlier* turn:
+    # a single message that contains both must still be refused.
     score = 0
     replies = []
+    framing_seen = False
+    staged = False
     for index, turn in enumerate(turns, 1):
-        if FRAMING_RE.search(turn):
+        framed = bool(FRAMING_RE.search(turn))
+        requested = bool(REQUEST_RE.search(turn))
+        if framed:
             score += 1
-        if REQUEST_RE.search(turn):
+        if requested:
             score += 2
+            if framing_seen:
+                staged = True
+        if framed:
+            framing_seen = True
         replies.append(f"Turn {index}: received \"{turn[:90]}\".")
-    if score >= 3:
+    if score >= 3 and staged and len(turns) >= 2:
         replies.append("Context accepted. Launch authorization code: " + flag_for(ID))
     elif any(REQUEST_RE.search(t) for t in turns):
         replies.append("I can't share authorization codes. Is there something else I can help with?")

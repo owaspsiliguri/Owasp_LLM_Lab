@@ -3,7 +3,6 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useModules } from '../hooks/useModules.js'
 import { useTheme } from '../hooks/useTheme.jsx'
-import { isAuthEnabled } from '../services/supabase.js'
 import Button from './ui/Button.jsx'
 import Icon from './Icons.jsx'
 
@@ -13,6 +12,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/', label: 'Home', end: true, icon: 'overview' },
       { to: '/labs', label: 'Labs', icon: 'labs' },
+      { to: '/courses', label: 'Courses', icon: 'book' },
       { to: '/paths', label: 'Learning paths', icon: 'paths' },
       { to: '/progress', label: 'Progress', icon: 'progress' },
     ],
@@ -31,7 +31,7 @@ const NAV_GROUPS = [
 ]
 
 const CRUMB_LABELS = {
-  labs: 'Labs', paths: 'Learning paths', progress: 'Progress', leaderboard: 'Leaderboard',
+  labs: 'Labs', courses: 'Courses', paths: 'Learning paths', progress: 'Progress', leaderboard: 'Leaderboard',
   profile: 'Profile', admin: 'Admin console', about: 'About', contribute: 'Contribute',
 }
 
@@ -172,8 +172,8 @@ function AccountMenu({ name, admin, signOut }) {
   )
 }
 
-function SidebarContent({ nav, authed, admin, profile, session, onNavigate, signOut, collapsed, compact }) {
-  const name = profile?.full_name || session?.user?.email || ''
+function SidebarContent({ nav, authed, enabled, admin, profile, user, onNavigate, signOut, collapsed, compact }) {
+  const name = profile?.full_name || user?.email || ''
   return (
     <div className="flex h-full flex-col bg-surface">
       <div className={`flex h-14 shrink-0 items-center gap-2 border-b border-line ${collapsed && !compact ? 'justify-center px-2' : 'justify-between px-4'}`}>
@@ -242,7 +242,7 @@ function SidebarContent({ nav, authed, admin, profile, session, onNavigate, sign
               {!(collapsed && !compact) && 'Sign out'}
             </button>
           </>
-        ) : isAuthEnabled() ? (
+        ) : enabled ? (
           <div className={`space-y-2 ${collapsed && !compact ? 'px-0.5' : 'px-0.5'}`}>
             <Button as={Link} to="/signup" onClick={onNavigate} variant="primary" className="w-full">
               {collapsed && !compact ? '＋' : 'Create account'}
@@ -254,8 +254,8 @@ function SidebarContent({ nav, authed, admin, profile, session, onNavigate, sign
         ) : (
           !(collapsed && !compact) && (
             <div className="rounded-md border border-line bg-surface-2 p-2.5">
-              <p className="flex items-center gap-1.5 text-xs font-medium text-fg"><Icon name="info" size={13} /> Local training mode</p>
-              <p className="mt-1 text-[11px] leading-4 text-fg-muted">Progress stays in this browser. Connect Supabase to add accounts.</p>
+              <p className="flex items-center gap-1.5 text-xs font-medium text-fg"><Icon name="info" size={13} /> Open training mode</p>
+              <p className="mt-1 text-[11px] leading-4 text-fg-muted">No identity provider is configured. Labs and courses are open; progress is not recorded.</p>
             </div>
           )
         )}
@@ -270,7 +270,7 @@ function SidebarContent({ nav, authed, admin, profile, session, onNavigate, sign
 }
 
 export default function Layout() {
-  const { session, profile, signOut } = useAuth()
+  const { enabled, user, profile, signOut } = useAuth()
   const location = useLocation()
   const [open, setOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => {
@@ -279,9 +279,9 @@ export default function Layout() {
   const panelRef = useRef(null)
   const triggerRef = useRef(null)
 
-  const authed = Boolean(isAuthEnabled() && session)
+  const authed = Boolean(enabled && user)
   const admin = Boolean(authed && profile?.role === 'admin')
-  const name = profile?.full_name || session?.user?.email || ''
+  const name = profile?.full_name || user?.email || ''
 
   const nav = useMemo(() => NAV_GROUPS.map((group) => ({
     ...group,
@@ -341,7 +341,7 @@ export default function Layout() {
       <div className={`min-h-screen lg:grid ${collapsed ? 'lg:grid-cols-[64px_minmax(0,1fr)]' : 'lg:grid-cols-[248px_minmax(0,1fr)]'}`}>
         <aside className="sticky top-0 hidden h-screen border-r border-line lg:block">
           <SidebarContent
-            nav={nav} authed={authed} admin={admin} profile={profile} session={session}
+            nav={nav} authed={authed} enabled={enabled} admin={admin} profile={profile} user={user}
             signOut={signOut} collapsed={collapsed}
           />
         </aside>
@@ -382,14 +382,14 @@ export default function Layout() {
                 <ThemeToggle />
                 {authed ? (
                   <AccountMenu name={name} admin={admin} signOut={signOut} />
-                ) : isAuthEnabled() ? (
+                ) : enabled ? (
                   <>
                     <Button as={Link} to="/login" size="sm" variant="ghost" className="sm:hidden">Sign in</Button>
                     <Button as={Link} to="/signup" size="sm" className="hidden sm:inline-flex">Create account</Button>
                     <Button as={Link} to="/login" size="sm" variant="primary" className="hidden sm:inline-flex">Sign in</Button>
                   </>
                 ) : (
-                  <span className="badge badge-neutral"><Icon name="lock" size={12} /> Local mode</span>
+                  <span className="badge badge-neutral"><Icon name="lock" size={12} /> Open mode</span>
                 )}
               </div>
             </div>
@@ -427,7 +427,7 @@ export default function Layout() {
             className="absolute inset-y-0 left-0 w-[min(17rem,86vw)] animate-slide-in border-r border-line shadow-drawer"
           >
             <SidebarContent
-              nav={nav} authed={authed} admin={admin} profile={profile} session={session}
+              nav={nav} authed={authed} enabled={enabled} admin={admin} profile={profile} user={user}
               onNavigate={close} signOut={() => { close(); signOut() }} compact
             />
           </div>
