@@ -122,7 +122,7 @@ def get_settings() -> Settings:
         refresh_token_days=max(1, _int("REFRESH_TOKEN_DAYS", 30)),
         # Default to the safe value in production; local HTTP development sets
         # COOKIE_SECURE=0 explicitly (see .env.example).
-        cookie_secure=_bool("COOKIE_SECURE", False),
+        cookie_secure=_bool("COOKIE_SECURE", bool(os.environ.get("RENDER"))),
         admin_email=os.environ.get("ADMIN_EMAIL", "").strip().lower(),
         admin_password=os.environ.get("ADMIN_PASSWORD", ""),
         supabase_anon_key=os.environ.get("SUPABASE_ANON_KEY", "").strip(),

@@ -144,13 +144,14 @@ def set_auth_cookies(
     existing_csrf: str | None = None,
 ) -> str:
     settings = get_settings()
+    samesite_val = "none" if settings.cookie_secure else "lax"
     response.set_cookie(
         ACCESS_COOKIE,
         access_token,
         max_age=settings.access_token_minutes * 60,
         httponly=True,
         secure=settings.cookie_secure,
-        samesite="lax",
+        samesite=samesite_val,
         path="/",
     )
     response.set_cookie(
@@ -159,7 +160,7 @@ def set_auth_cookies(
         max_age=refresh_cookie_max_age(),
         httponly=True,
         secure=settings.cookie_secure,
-        samesite="lax",
+        samesite=samesite_val,
         path="/api/auth",
     )
     return ensure_csrf(response, existing_csrf)
@@ -167,25 +168,28 @@ def set_auth_cookies(
 
 def clear_auth_cookies(response: Response) -> None:
     settings = get_settings()
+    samesite_val = "none" if settings.cookie_secure else "lax"
     response.delete_cookie(ACCESS_COOKIE, path="/")
     response.delete_cookie(REFRESH_COOKIE, path="/api/auth")
     response.delete_cookie(CSRF_COOKIE, path="/")
     # Use the same attributes where a browser distinguishes deletion cookies.
     if settings.cookie_secure:
-        response.delete_cookie(ACCESS_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
-        response.delete_cookie(REFRESH_COOKIE, path="/api/auth", secure=True, httponly=True, samesite="lax")
+        response.delete_cookie(ACCESS_COOKIE, path="/", secure=True, httponly=True, samesite=samesite_val)
+        response.delete_cookie(REFRESH_COOKIE, path="/api/auth", secure=True, httponly=True, samesite=samesite_val)
+        response.delete_cookie(CSRF_COOKIE, path="/", secure=True, httponly=False, samesite=samesite_val)
 
 
 def ensure_csrf(response: Response, existing: str | None = None) -> str:
     settings = get_settings()
     token = existing or secrets.token_urlsafe(32)
+    samesite_val = "none" if settings.cookie_secure else "lax"
     response.set_cookie(
         CSRF_COOKIE,
         token,
         max_age=refresh_cookie_max_age(),
         httponly=False,  # the browser must be able to mirror it in a header
         secure=settings.cookie_secure,
-        samesite="lax",
+        samesite=samesite_val,
         path="/",
     )
     return token
